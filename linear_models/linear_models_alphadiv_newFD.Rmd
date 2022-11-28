@@ -1,0 +1,755 @@
+---
+title: "linear_models on alpha hill numbers"
+author: "Adam_Koziol"
+date: "4/21/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+setting up the environment    
+
+```{r include=FALSE}
+setwd('~/Documents/GitHub/Plasticity_Exp_Repo/linear_models/')
+library(tidyverse)
+library(nlme)
+library(broom)
+library(ggplotify)
+library(multcomp)
+library(tinytex)
+library(lme4)
+library(jtools)
+library(sjPlot)
+library(effects)
+```
+Loading the data
+```{r}
+####For some reason the dataframe has duplicates - remove these
+alpha_diversity_tax <- read.csv('../hill_numbers/outputsR/diversity_table.csv', header=T, row.names=1) %>%
+  unique(.) %>%
+  as.tibble
+#####Combined dataframe containing functional diversities
+alpha_diversity_fd <- read.csv('../hill_numbers/outputsR/diversity_table_fd.csv', header=T, row.names = 1)
+####Phylogenetic diversities
+alpha_diversity_pd <- read.csv('../hill_numbers/outputsR/diversity_table_pd.csv', header=T, row.names = 1)
+#####Metadata
+metadata <- read.csv('../data/metadata.csv')
+```
+Combining the metadata with the dataframes
+```{r}
+alph_div_tax_as <- alpha_diversity_tax %>%
+  filter(species == 'AS') %>% 
+  dplyr::select(c(diversity, sample_id)) %>%
+  left_join(metadata, by='sample_id') %>%
+  mutate(days=case_when(treatment == 'Day1' ~ 0,
+                        treatment == 'Acc' ~ 7,
+                        treatment == 'Heat' ~ 19,
+                        treatment == 'Cold' ~ 33,
+                        treatment == 'Diet' ~ 45)) %>%
+  mutate(treatment = factor(treatment, levels = c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')))
+
+alph_div_tax_cr <- alpha_diversity_tax %>%
+  filter(species == 'CR') %>%
+  dplyr::select(c(diversity, sample_id)) %>%
+  left_join(metadata, by='sample_id') %>%
+  mutate(days=case_when(treatment == 'Day1' ~ 0,
+                        treatment == 'Acc' ~ 7,
+                        treatment == 'Heat' ~ 19,
+                        treatment == 'Cold' ~ 33,
+                        treatment == 'Diet' ~ 45),
+         cage=case_when(cage == 1 ~ 6,
+                        cage == 2 ~ 7,
+                        cage == 3 ~ 8,
+                        cage == 4 ~ 9,
+                        cage == 5 ~ 10,
+                        cage == 6 ~ 11)) %>%
+  mutate_at(2:8, as.factor) %>%
+  mutate(treatment = factor(treatment, levels = c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')))
+
+alph_div_fd_as <- alpha_diversity_fd %>%
+  filter(species == 'AS') %>%
+  dplyr::select(c(Q, sample_id)) %>%
+  left_join(metadata, by='sample_id') %>%
+  filter(treatment != 'FAST') %>%
+  mutate(days=case_when(treatment == 'Day1' ~ 0,
+                        treatment == 'Acc' ~ 7,
+                        treatment == 'Heat' ~ 19,
+                        treatment == 'Cold' ~ 33,
+                        treatment == 'Diet' ~ 45)) %>%
+  mutate_at(2:8, as.factor) %>%
+  mutate(treatment = factor(treatment, levels = c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')))
+
+alph_div_fd_cr <- alpha_diversity_fd %>%
+  filter(species == 'CR') %>%
+  dplyr::select(c(Q, sample_id)) %>%
+  left_join(metadata, by='sample_id') %>%
+  mutate(days=case_when(treatment == 'Day1' ~ 0,
+                        treatment == 'Acc' ~ 7,
+                        treatment == 'Heat' ~ 19,
+                        treatment == 'Cold' ~ 33,
+                        treatment == 'Diet' ~ 45),
+         cage=case_when(cage == 1 ~ 6,
+                        cage == 2 ~ 7,
+                        cage == 3 ~ 8,
+                        cage == 4 ~ 9,
+                        cage == 5 ~ 10,
+                        cage == 6 ~ 11)) %>%
+  mutate_at(2:8, as.factor) %>%
+  mutate(treatment = factor(treatment, levels = c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')))
+
+alph_div_pd_as <- alpha_diversity_pd %>%
+  filter(species == 'AS') %>%
+  dplyr::select(c(diversity, sample_id)) %>%
+  left_join(metadata, by='sample_id') %>%
+  filter(treatment != 'FAST') %>%
+  mutate(days=case_when(treatment == 'Day1' ~ 0,
+                        treatment == 'Acc' ~ 7,
+                        treatment == 'Heat' ~ 19,
+                        treatment == 'Cold' ~ 33,
+                        treatment == 'Diet' ~ 45)) %>%
+  mutate_at(2:8, as.factor) %>%
+  mutate(treatment = factor(treatment, levels = c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')))
+
+alph_div_pd_cr <- alpha_diversity_pd %>%
+  filter(species == 'CR') %>%
+  dplyr::select(c(diversity, sample_id)) %>%
+  left_join(metadata, by='sample_id') %>%
+  mutate(days=case_when(treatment == 'Day1' ~ 0,
+                        treatment == 'Acc' ~ 7,
+                        treatment == 'Heat' ~ 19,
+                        treatment == 'Cold' ~ 33,
+                        treatment == 'Diet' ~ 45),
+         cage=case_when(cage == 1 ~ 6,
+                        cage == 2 ~ 7,
+                        cage == 3 ~ 8,
+                        cage == 4 ~ 9,
+                        cage == 5 ~ 10,
+                        cage == 6 ~ 11)) %>%
+  mutate_at(2:8, as.factor) %>%
+  mutate(treatment = factor(treatment, levels = c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')))
+```
+Sanity check of each factor
+```{r}
+sapply(alph_div_tax_as, mode)
+contr <- rbind("Day1-Acc" = c(1, -1, 0, 0, 0),
+               "Acc-Heat" = c(0, 1, -1, 0, 0),
+               "Heat-Cold" = c(0, 0, 1,-1, 0),
+               "Cold-Diet" = c(0, 0, 0, 1,-1))
+contr_cr <- rbind("Day1-Acc" = c(1, -1, 0, 0, 0),
+               "Acc-Heat" = c(0, 1, -1, 0, 0),
+               "Heat-Cold" = c(0, 0, 1,-1, 0),
+               "Cold-Diet" = c(0, 0, 0, 1,-1))
+```
+
+```{r}
+hist(alph_div_tax_as$diversity)
+```
+
+treatment_wise_boxplots from the taxonomic diversity Hill numbers 
+```{r}
+boxplot(diversity~treatment*cage,data = alph_div_tax_as)
+```
+Assessment of log transformation it looks tighter, however the non-transformed data still looks ok to me so i will continue with this
+```{r}
+boxplot(log(diversity)~treatment*cage,data = alph_div_tax_as)
+```
+Create the models for comparison - including the random effects results in the lowest AIC
+```{r}
+###Try to include the other factors 
+model_as.a <- lme(diversity~treatment,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_tax_as)
+model_as.b <- lme(diversity~treatment,
+                  random = ~1|cage,
+                  data=alph_div_tax_as)
+model_as.c <- lme(diversity~treatment,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_tax_as)
+#model_as.d <- lme(diversity~treatment,
+                  #random = ~1|cage,
+                  #correlation = corCAR1(form = ~ days),
+                  #data=alph_div_tax_as)
+model_as.e <- lm(diversity~treatment,
+                  data=alph_div_tax_as)
+
+anova(model_as.a,model_as.b,model_as.c,model_as.e)
+AIC(model_as.a) #931.8822
+AIC(model_as.b) #933.4933
+AIC(model_as.c) #930.3255
+AIC(model_as.e) #960.1475
+```
+Residuals looks like they are randomly distributed around 0
+```{r}
+model_as1=model_as.a
+E <- resid(model_as1, type = "normalized")
+Fit <- fitted(model_as1)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+```
+
+
+```{r}
+par(op)
+bp=boxplot(E ~ treatment,
+           data = alph_div_tax_as)
+```
+```{r}
+summary(model_as.a)
+```
+
+We have a slightly significant treatment effect
+```{r}
+anova(model_as.a)
+```
+```{r}
+plot(allEffects(model_as.a))
+```
+
+Pairwise comparison of treatments to assess where the significant effects are
+```{r}
+summary(glht(model_as.a, linfct = mcp(treatment=contr),
+                   test = adjusted("holm")))
+```
+
+```{r}
+#plot_model(model_as1, type='Day1d', terms = c('treatment'))
+```
+
+################Start if the Crocidura taxonomic linear models########################
+```{r}
+boxplot(diversity~treatment*cage,data = alph_div_tax_cr)
+```
+
+```{r}
+boxplot(log(diversity)~treatment*cage,data = alph_div_tax_cr)
+```
+
+```{r}
+hist(alph_div_tax_cr$diversity)
+```
+The lowest AIC is the gls without random effects - however i consider the random effects to be an essential study design parameter - i'll continue with the random effects
+included
+```{r}
+#model_cr.a <- lme(diversity~treatment,
+                  #random = ~1|cage/individual_id,
+                  #correlation = corCAR1(form = ~ as.numeric(days)),
+                  #data=alph_div_tax_cr)
+model_cr.b <- lme(diversity~treatment,
+                  random = ~1|cage,
+                  data=alph_div_tax_cr)
+model_cr.c <- lme(diversity~treatment,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_tax_cr)
+model_cr.e <- lm(diversity~treatment,
+                  data=alph_div_tax_cr)
+
+#AIC(model_cr.a) #657.3954
+AIC(model_cr.b) #654.6046
+AIC(model_cr.c) #655.3954
+#AIC(model_cr.d) #NA
+AIC(model_cr.e) #658.816
+```
+
+
+
+
+```{r}
+model_cr1=model_cr.b
+E <- resid(model_cr1, type = "normalized")
+Fit <- fitted(model_cr1)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+```
+```{r}
+par(op)
+bp=boxplot(E ~ treatment,
+           data = alph_div_tax_cr)
+```
+
+Again we have a slightly significance treatment effect on taxonomy
+```{r}
+anova(model_cr1)
+```
+Pairwise comparison of treatments
+```{r}
+summary(glht(model_cr1, linfct = mcp(treatment=contr_cr),
+                   test = adjusted("holm")))
+```
+################Start of functional alpha diversity Apodemus#################
+```{r}
+boxplot(Q~treatment*cage,data = alph_div_fd_as)
+```
+
+```{r}
+boxplot(log(Q)~treatment*cage,data = alph_div_fd_as)
+```
+```{r}
+hist(alph_div_fd_as$Q)
+```
+
+
+
+```{r}
+model_as.a_fd <- lme(Q~treatment,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_fd_as)
+model_as.b_fd <- lme(Q~treatment,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_fd_as)
+model_as.c_fd <- lme(Q~treatment,
+                  random = ~1|cage,
+                  data=alph_div_fd_as)
+model_as.d_fd <- lme(Q~treatment,
+                  random = ~1|cage/individual_id,
+                  data=alph_div_fd_as)
+model_as.e_fd <- lm(Q~treatment,
+                  data=alph_div_fd_as)
+AIC(model_as.a_fd) #292.0188
+AIC(model_as.b_fd) #290.6965
+AIC(model_as.c_fd) #292.2867
+AIC(model_as.d_fd) #292.3475
+AIC(model_as.e_fd) #286.632
+```
+
+
+```{r}
+model_as1_fd=model_as.a_fd
+E <- resid(model_as1_fd, type = "normalized")
+Fit <- fitted(model_as.a_fd)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+par(op)
+bp=boxplot(E ~ treatment,
+           data = alph_div_fd_as)
+```
+We observe no significant difference in the effect of treatment on functional alpha diversity
+```{r}
+anova(model_as1_fd)
+```
+This is useless - ignore it for now but just wanted to sanity check
+```{r}
+summary(glht(model_as1_fd, linfct = mcp(treatment=contr),
+                   test = adjusted("holm")))
+```
+####################Start of the Crocidura functional alpha diversity
+```{r}
+boxplot(Q~treatment*cage,data = alph_div_fd_cr)
+```
+
+```{r}
+boxplot(log(Q)~treatment*cage,data = alph_div_fd_cr)
+```
+```{r}
+hist(alph_div_fd_cr$Q)
+```
+
+
+```{r}
+model_cr.a_fd <- lme(Q~treatment,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_fd_cr)
+model_cr.b_fd <- lme(Q~treatment,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_fd_cr)
+model_cr.c_fd <- lme(Q~treatment,
+                  random = ~1|cage,
+                  data=alph_div_fd_cr)
+model_cr.d_fd <- lme(Q~treatment,
+                  random = ~1|individual_id,
+                  data=alph_div_fd_cr)
+model_cr.e_fd <- lm(Q~treatment,
+                  data=alph_div_fd_cr)
+
+
+AIC(model_cr.a_fd) #377.5765
+AIC(model_cr.b_fd) #376.0824
+AIC(model_cr.c_fd) #379.5765
+AIC(model_cr.d_fd) #374.0913
+AIC(model_cr.e_fd) #370.5743
+```
+
+```{r}
+model_cr1_fd=model_cr.a_fd
+E <- resid(model_cr1_fd, type = "normalized")
+Fit <- fitted(model_cr1_fd)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+par(op)
+bp=boxplot(E ~ treatment,
+           data = alph_div_tax_cr)
+```
+We have a highly significant effect of treatment on functional alpha diversity
+```{r}
+anova(model_cr1_fd)
+```
+
+```{r}
+summary(glht(model_cr1_fd, linfct = mcp(treatment=contr_cr),
+                   test = adjusted("holm")))
+```
+```{r}
+plot(allEffects(model_cr1_fd))
+```
+
+
+########Phylogenetic linear models
+```{r}
+hist(alph_div_pd_as$diversity)
+```
+
+treatment_wise_boxplots from the taxonomic diversity Hill numbers 
+```{r}
+boxplot(diversity~treatment*cage,data = alph_div_pd_as)
+```
+Assessment of log transformation it looks tighter, however the non-transformed data still looks ok to me so i will continue with this
+```{r}
+boxplot(log(diversity)~treatment*cage,data = alph_div_pd_as)
+```
+Create the models for comparison - including the random effects results in the lowest AIC
+```{r}
+###Try to include the other factors 
+model_as.a.pd <- lme(diversity~treatment,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_pd_as)
+model_as.b.pd  <- lme(diversity~treatment,
+                  random = ~1|individual_id,
+                  data=alph_div_pd_as)
+model_as.c.pd  <- lme(diversity~treatment,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_pd_as)
+model_as.d.pd  <- lme(diversity~treatment,
+                  random = ~1|cage,
+                  data=alph_div_pd_as)
+model_as.e.pd  <- lm(diversity~treatment,
+                  data=alph_div_pd_as)
+
+anova(model_as.a.pd,model_as.b.pd,model_as.c.pd,model_as.e.pd)
+AIC(model_as.a.pd ) #525.004
+AIC(model_as.b.pd ) #529.4421
+AIC(model_as.c.pd ) #529.9477
+AIC(model_as.d.pd ) #523.7998
+AIC(model_as.e.pd ) #546.8065
+```
+Residuals looks like they are randomly distributed around 0
+```{r}
+model_as1_pd=model_as.a.pd
+E <- resid(model_as1_pd, type = "normalized")
+Fit <- fitted(model_as1_pd)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+```
+
+
+```{r}
+par(op)
+bp=boxplot(E ~ treatment,
+           data = alph_div_pd_as)
+```
+```{r}
+summary(model_as1_pd)
+#####There is an interesting sex effect on Phylogenetic diversity sexMALE	-5.406496	1.414101	3	-3.823273	0.0315
+```
+
+We have a slightly significant treatment effect
+```{r}
+anova(model_as1_pd)
+
+#There is a significant treatment and sex effect 
+#Treatment = 0.0374
+#Sex = 0.0105
+```
+
+```{r}
+plot(allEffects(model_as1_pd))
+```
+
+
+######Phylogenetic on the Crocidura phylogenetic diversity
+
+```{r}
+hist(alph_div_pd_cr$diversity)
+```
+
+treatment_wise_boxplots from the taxonomic diversity Hill numbers 
+```{r}
+boxplot(diversity~treatment*cage,data = alph_div_pd_cr)
+```
+Assessment of log transformation it looks tighter, however the non-transformed data still looks ok to me so i will continue with this
+```{r}
+boxplot(log(diversity)~treatment*cage,data = alph_div_pd_cr)
+```
+Create the models for comparison - including the random effects results in the lowest AIC
+```{r}
+###Try to include the other factors 
+model_cr.a.pd <- lme(diversity~treatment,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_pd_cr)
+model_cr.b.pd  <- lme(diversity~treatment,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_pd_cr)
+model_cr.c.pd  <- lme(diversity~treatment,
+                  random = ~1|cage,
+                  data=alph_div_pd_cr)
+model_cr.d.pd  <- lme(diversity~treatment,
+                  random = ~1|individual_id,
+                  data=alph_div_pd_cr)
+model_cr.e.pd <-  lm(diversity~treatment,
+                     data=alph_div_pd_cr)
+
+
+anova(model_cr.a.pd,model_cr.b.pd,model_cr.c.pd,model_cr.e.pd)
+AIC(model_cr.a.pd ) #383.197
+AIC(model_cr.b.pd ) #381.197
+AIC(model_cr.c.pd ) #379.439
+AIC(model_cr.d.pd ) #379.439
+AIC(model_cr.e.pd ) #377.9547
+```
+Residuals looks like they are randomly distributed around 0
+```{r}
+model_cr1_pd=model_cr.a.pd
+E <- resid(model_cr1_pd, type = "normalized")
+Fit <- fitted(model_cr1_pd)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+```
+```{r}
+plot(model_cr1_pd)
+```
+
+
+```{r}
+par(op)
+bp=boxplot(E ~ treatment,
+           data = alph_div_pd_cr)
+```
+```{r}
+summary(model_cr1_pd)
+#####There is an interesting sex effect on Phylogenetic diversity sexMALE	-5.406496	1.414101	3	-3.823273	0.0315
+```
+
+
+We have a slightly significant treatment effect
+```{r}
+anova(model_cr1_pd)
+```
+```{r}
+plot(allEffects(model_cr1_pd))
+```
+Species-species alpha diversity linear model
+```{r}
+alph_div_combined <- rbind(alph_div_tax_as, alph_div_tax_cr)
+
+hist(alph_div_combined$diversity)
+```
+```{r}
+boxplot(diversity~treatment*cage,data = alph_div_combined)
+```
+```{r}
+boxplot(log10(diversity)~treatment*cage,data = alph_div_combined)
+```
+
+```{r}
+###Try to include the other factors 
+model_div_combined.a <- lme(log(diversity)~species,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_combined)
+model_div_combined.b  <- lme(diversity~species,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_combined)
+model_div_combined.c  <- lme(diversity~species,
+                  random = ~1|cage,
+                  data=alph_div_combined)
+model_div_combined.d  <- lme(diversity~species,
+                  random = ~1|individual_id,
+                  data=alph_div_combined)
+model_div_combined.e <-  lm(diversity~species,
+                     data=alph_div_combined)
+
+
+AIC(model_div_combined.a) #1868.937
+AIC(model_div_combined.b) #1868.075
+AIC(model_div_combined.c) #1875.097
+AIC(model_div_combined.d) #1872.694
+AIC(model_div_combined.e) #1885.803
+```
+```{r}
+model_alph_combined=model_div_combined.a
+E <- resid(model_alph_combined, type = "normalized")
+Fit <- fitted(model_alph_combined)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+```
+```{r}
+plot(model_alph_combined)
+```
+```{r}
+#par(op)
+#bp=boxplot(E ~ species,
+#           data = model_div_combined.a)
+```
+```{r}
+summary(model_alph_combined)
+```
+```{r}
+anova(model_alph_combined)
+```
+
+```{r}
+plot(allEffects(model_alph_combined))
+```
+
+```{r}
+###Try to include the other factors 
+alph_div_fd_combined <- rbind(alph_div_fd_as, alph_div_fd_cr)
+hist(alph_div_fd_combined$Q)
+boxplot(Q~treatment*cage,data = alph_div_fd_combined)
+boxplot(log10(Q)~treatment*cage,data = alph_div_fd_combined)
+model_div_fd_combined.a <- lme(Q~species,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_fd_combined)
+model_div_fd_combined.b  <- lme(Q~species,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_fd_combined)
+model_div_fd_combined.c  <- lme(Q~species,
+                  random = ~1|cage,
+                  data=alph_div_fd_combined)
+model_div_fd_combined.d  <- lme(Q~species,
+                  random = ~1|individual_id,
+                  data=alph_div_fd_combined)
+model_div_fd_combined.e <-  lm(Q~species,
+                     data=alph_div_fd_combined)
+
+
+AIC(model_div_fd_combined.a) #940.832
+AIC(model_div_fd_combined.b) #939.4217
+AIC(model_div_fd_combined.c) #941.6157
+AIC(model_div_fd_combined.d) #937.4217
+AIC(model_div_fd_combined.e) #939.4188
+```
+```{r}
+model_alph_fd_combined=model_div_fd_combined.a
+E <- resid(model_alph_fd_combined, type = "normalized")
+Fit <- fitted(model_alph_fd_combined)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+```
+```{r}
+plot(model_alph_fd_combined)
+```
+```{r}
+#par(op)
+#bp=boxplot(E ~ species,
+#           data = model_div_combined.a)
+```
+```{r}
+summary(model_alph_fd_combined)
+```
+```{r}
+anova(model_alph_fd_combined)
+```
+
+```{r}
+plot(allEffects(model_alph_fd_combined))
+```
+
+```{r}
+###Try to include the other factors 
+alph_div_pd_combined <- rbind(alph_div_pd_as, alph_div_pd_cr)
+hist(alph_div_pd_combined$diversity)
+boxplot(diversity~treatment*cage,data = alph_div_pd_combined)
+boxplot(log10(diversity)~treatment*cage,data = alph_div_pd_combined)
+model_div_pd_combined.a <- lme(diversity~species,
+                  random = ~1|cage/individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_pd_combined)
+model_div_pd_combined.b  <- lme(diversity~species,
+                  random = ~1|individual_id,
+                  correlation = corCAR1(form = ~ as.numeric(days)),
+                  data=alph_div_pd_combined)
+model_div_pd_combined.c  <- lme(diversity~species,
+                  random = ~1|cage,
+                  data=alph_div_pd_combined)
+model_div_pd_combined.d  <- lme(diversity~species,
+                  random = ~1|individual_id,
+                  data=alph_div_pd_combined)
+model_div_pd_combined.e <-  lm(diversity~species,
+                     data=alph_div_pd_combined)
+
+
+AIC(model_div_pd_combined.a) #940.832
+AIC(model_div_pd_combined.b) #939.4217
+AIC(model_div_pd_combined.c) #941.6157
+AIC(model_div_pd_combined.d) #937.4217
+AIC(model_div_pd_combined.e) #939.4188
+```
+```{r}
+model_alph_pd_combined=model_div_pd_combined.a
+E <- resid(model_alph_pd_combined, type = "normalized")
+Fit <- fitted(model_alph_pd_combined)
+op <- par(mfrow = c(1, 2))
+plot(x = Fit, y = E,
+     xlab = "Fitted values", ylab = "Residuals",
+     main = "Residuals versus fitted values")
+hist(E, nclass = 15)
+```
+```{r}
+plot(model_alph_pd_combined)
+```
+```{r}
+#par(op)
+#bp=boxplot(E ~ species,
+#           data = model_div_combined.a)
+```
+```{r}
+summary(model_alph_pd_combined)
+```
+```{r}
+anova(model_alph_pd_combined)
+```
+
+```{r}
+plot(allEffects(model_alph_pd_combined))
+```
+
+```{r}
+sessionInfo()
+```
+

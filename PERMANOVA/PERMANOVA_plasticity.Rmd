@@ -1,0 +1,399 @@
+---
+title: "PERMANOVA_plasticity"
+author: "Adam_Koziol"
+date: '2022-07-22'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r include=FALSE}
+setwd('~/Documents/GitHub/Plasticity_Exp_Repo/Plasticity_Exp_Repo/PERMANOVA/')
+getwd()
+library(tidyverse)
+library(vegan)
+library(kableExtra)
+library(hillR)
+library(ggvegan)
+library(wesanderson)
+library(ggpubr)
+library(caret)
+library(ape)
+library(phytools)
+```
+Kable execution of PERMANOVA tables
+```{r}
+table_func <- function(input, str_removal, table_title){
+maineffects <- input[c(1,2,3),]
+interaction <- input[c(4,5),]
+maineffectsrow <- rbind(maineffects, interaction) %>%
+  rownames_to_column('Main_effects') %>%
+  mutate(Main_effects = str_remove_all(Main_effects, '[$]+')) %>%
+  mutate(Main_effects = str_remove_all(Main_effects, str_removal))
+
+maineffects_table <- kable(maineffectsrow, format = 'html', digits = 3, caption = table_title) %>%
+  kable_styling(full_width = F)
+
+return(maineffects_table)
+}
+
+```
+
+Loading in the data files
+```{r include=FALSE}
+metadata <- read.csv('../data/metadata.csv', row.names = 1, header = T)
+
+CR_met <- metadata %>%
+  filter(species == 'CR') %>%
+  column_to_rownames('sample_id') %>%
+  mutate(sample_id = rownames(.))
+
+AS_met <- metadata %>%
+  filter(species == 'AS') %>%
+  column_to_rownames('sample_id') %>%
+  mutate(sample_id = rownames(.))
+
+CR_counts <- read.csv('../data/TPM_CR.csv', row.names = 1, header = T)
+AS_counts <- read.csv('../data/AS_TPM.csv', row.names = 1, header = T) %>%
+  .[,rownames(AS_met)]
+
+CR_tree <- read.tree(file='../data/gtdbtk.bac120.classify_CR.tree') %>%
+  keep.tip(row.names(CR_counts)) %>%
+  force.ultrametric(CR_tree,method="extend")
+
+AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>%
+  keep.tip(row.names(AS_counts)) %>%
+  force.ultrametric(AS_tree,method="extend")
+
+AS_products <- read.csv('../damma/outputsR/distilled_table_functions_AS.csv', row.names = 1, header = T) %>%
+  .[rownames(AS_counts),]
+
+CR_products <- read.csv('../damma/outputsR/distilled_nonbinary_compounds_CR.csv', row.names = 1, header = T) %>%
+  .[rownames(CR_counts),]
+```
+
+Taxonomic dissimilarity matrix
+```{r include=FALSE}
+CR_dissim <- hill_taxa_parti_pairwise(t(CR_counts), q = 1, output = 'matrix') %>% 
+  .[[5]] %>%
+  as.data.frame %>% 
+  mutate_all(~1 - .) %>%
+  t() %>% 
+  as.dist()
+
+AS_dissim <- hill_taxa_parti_pairwise(t(AS_counts), q = 1, output = 'matrix') %>% 
+  .[[5]] %>%
+  as.data.frame %>% 
+  mutate_all(~1 - .) %>%
+  t() %>% 
+  as.dist()
+```
+
+Phylogenetic dissimilarity matrix
+```{r include=FALSE}
+CR_dissim_pd <- hill_phylo_parti_pairwise(t(CR_counts), tree = CR_tree, q = 1, output = 'matrix') %>% 
+  .[[5]] %>%
+  as.data.frame %>% 
+  mutate_all(~1 - .) %>%
+  t() %>% 
+  as.dist()
+
+AS_dissim_pd <- hill_phylo_parti_pairwise(t(AS_counts), q = 1, tree=AS_tree, output = 'matrix') %>% 
+  .[[5]] %>%
+  as.data.frame %>% 
+  mutate_all(~1 - .) %>%
+  t() %>% 
+  as.dist()
+```
+
+Functional dissimilarity matrix
+```{r include=FALSE}
+CR_products <- CR_products[rownames(CR_counts),]
+
+CR_dissim_fd <- hill_func_parti_pairwise(comm = t(CR_counts),
+                                         traits = CR_products,
+                                         output = 'matrix',
+                                         q=1) %>% 
+  .[[5]] %>%
+  as.data.frame %>% 
+  mutate_all(~1 - .) %>%
+  t() %>% 
+  as.dist
+
+AS_dissim_fd <- hill_func_parti_pairwise(t(AS_counts), AS_products, output = 'matrix', q=1) %>% 
+  .[[5]] %>% 
+  as.data.frame %>% 
+  mutate_all(~1 - .) %>%
+  t() %>% 
+  as.dist
+```
+
+Perform the PERMANOVA 
+```{r echo=TRUE}
+###Re-order the metdata
+CR_met <- CR_met[colnames(CR_counts),]
+
+CR_perm <- adonis2(CR_dissim ~ CR_met$treatment, strata = CR_met$individual_id, permutations = 9999)
+
+table <- table_func(input = CR_perm,
+                    str_removal = 'CR_met',
+                    table_title = 'PERMANOVA_CR1_Neutral')
+
+table
+```
+
+```{r include=FALSE}
+AS_met <- AS_met[colnames(AS_counts),]
+
+AS_perm <- adonis2(AS_dissim ~ AS_met$treatment, strata = AS_met$individual_id, permutations = 9999)
+
+table <- table_func(input = AS_perm,
+                    str_removal = 'AS_met',
+                    table_title = 'PERMANOVA_AS1_Neutral')
+
+table
+```
+Perform the phylogenetic PERMANOVA 
+```{r echo=TRUE}
+CR_perm_phy <- adonis2(CR_dissim_pd ~ CR_met$treatment, strata = CR_met$individual_id, permutations = 9999)
+
+table <- table_func(input = CR_perm_phy,
+                    str_removal = 'CR_met',
+                    table_title = 'PERMANOVA_CR1_Phylogenetic')
+
+table
+```
+
+```{r echo=TRUE}
+AS_perm_phy <- adonis2(AS_dissim_pd ~ AS_met$treatment, strata = AS_met$individual_id, permutations = 9999)
+
+table <- table_func(input = AS_perm_phy,
+                    str_removal = 'AS_met',
+                    table_title = 'PERMANOVA_AS1_Phylogenetic')
+
+table
+```
+
+Perform the functional PERMANOVA 
+```{r echo=TRUE}
+CR_perm_fd <- adonis2(CR_dissim_fd ~ CR_met$treatment, strata = CR_met$individual_id, permutations = 9999)
+
+table <- table_func(input = CR_perm_fd,
+                    str_removal = 'CR_met',
+                    table_title = 'PERMANOVA_CR1_Functional')
+
+table
+```
+
+```{r echo=TRUE}
+AS_perm_fd <- adonis2(AS_dissim_fd ~ AS_met$treatment, strata = AS_met$individual_id, permutations = 9999)
+
+table <- table_func(input = AS_perm_fd,
+                    str_removal = 'AS_met',
+                    table_title = 'PERMANOVA_AS1_Functional')
+
+table
+```
+
+######CAP plots - Apodemus neutral CAP
+```{r echo=TRUE}
+cca_ord <- capscale(formula = AS_dissim ~ AS_met$treatment)
+
+CAP_df <- as.data.frame(vegan::scores(cca_ord, display = "sites")) %>%
+  rownames_to_column('sample_id') %>%
+  left_join(AS_met, by = 'sample_id') %>%
+  column_to_rownames('sample_id')
+
+AS_plot <- ggplot(CAP_df, aes(x = CAP1, y = CAP2, colour = treatment, fill = treatment)) +
+  geom_point() +
+  scale_colour_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  theme_classic() +
+  theme(axis.title = element_text(face = 'bold',
+                             size = 10),
+        axis.title.x = element_blank(),
+        title = element_text(face = 'italic',
+                             size = 14),
+        legend.title = element_text(face = 'plain')) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  ggtitle("A. sylvaticus") +
+  labs(fill='Disturbance',
+       colour='Disturbance') +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylab("Neutral\n\nCAP2") + 
+  xlab("CAP1") +
+  stat_ellipse(geom = 'polygon', aes(fill=treatment, colour=treatment), alpha = 0.25)
+AS_plot
+```
+Crocidura neutral CAP
+```{r echo=TRUE}
+cca_ord <- capscale(formula = CR_dissim ~ CR_met$treatment)
+
+CAP_df <- as.data.frame(vegan::scores(cca_ord, display = "sites")) %>%
+  rownames_to_column('sample_id') %>%
+  left_join(CR_met, by = 'sample_id') %>%
+  column_to_rownames('sample_id')
+
+CR_plot <- ggplot(CAP_df, aes(x = CAP1, y = CAP2, colour = treatment, fill=treatment)) +
+  geom_point() +
+  scale_colour_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  theme_classic() +
+  theme(axis.title = element_text(face = 'bold',
+                             size = 10),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        title = element_text(face = 'italic',
+                             size = 14),
+        legend.title = element_text(face = 'plain')) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  labs(title="C. russula") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylab("Neutral\n\nCAP2") + 
+  xlab("CAP1") +
+  stat_ellipse(geom = 'polygon', aes(fill=treatment, colour=treatment), alpha = 0.25)
+
+CR_plot
+```
+Apodemus phylogenetic CAP
+```{r echo=TRUE}
+cca_ord <- capscale(formula = AS_dissim_pd ~ AS_met$treatment)
+
+CAP_df <- as.data.frame(vegan::scores(cca_ord, display = "sites")) %>%
+  rownames_to_column('sample_id') %>%
+  left_join(AS_met, by = 'sample_id') %>%
+  column_to_rownames('sample_id')
+
+AS_plot_pd <- ggplot(CAP_df, aes(x = CAP1, y = CAP2, colour = treatment, fill = treatment)) +
+  geom_point() +
+  scale_colour_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  theme_classic() +
+  theme(axis.title = element_text(face = 'bold',
+                             size = 10),
+        axis.title.x=element_blank(),
+        title = element_text(face = 'italic',
+                             size = 14),
+        legend.title = element_text(face = 'plain')) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  #ggtitle("A. sylvaticus") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylab("Phylogenetic\n\nCAP2") + 
+  xlab("CAP1") +
+  stat_ellipse(geom = 'polygon', aes(fill=treatment, colour=treatment), alpha = 0.25)
+
+AS_plot_pd
+```
+
+Crocidura phylogenetic CAP
+```{r echo=TRUE}
+cca_ord <- capscale(formula = CR_dissim_pd ~ CR_met$treatment)
+
+CAP_df <- as.data.frame(vegan::scores(cca_ord, display = "sites")) %>%
+  rownames_to_column('sample_id') %>%
+  left_join(CR_met, by = 'sample_id') %>%
+  column_to_rownames('sample_id')
+
+CR_plot_pd <- ggplot(CAP_df, aes(x = CAP1, y = CAP2, colour = treatment, fill = treatment)) +
+  geom_point() +
+  scale_colour_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  theme_classic() +
+  theme(axis.title = element_text(face = 'bold',
+                             size = 10),
+        axis.title.y=element_blank(),
+        axis.title.x=element_blank(),
+        title = element_text(face = 'italic',
+                             size = 14),
+        legend.title = element_text(face = 'plain')) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylab("") + 
+  xlab("CAP1") +
+  stat_ellipse(geom = 'polygon', aes(fill=treatment, colour=treatment), alpha = 0.25)
+
+CR_plot_pd
+```
+
+Apodemus functional CAP
+```{r echo=TRUE}
+cca_ord <- capscale(formula = AS_dissim_fd ~ AS_met$treatment)
+
+CAP_df <- as.data.frame(vegan::scores(cca_ord, display = "sites")) %>%
+  rownames_to_column('sample_id') %>%
+  left_join(AS_met, by = 'sample_id') %>%
+  column_to_rownames('sample_id')
+
+AS_plot_fd <- ggplot(CAP_df, aes(x = CAP1, y = CAP2, colour = treatment, fill = treatment)) +
+  geom_point() +
+  scale_colour_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  theme_classic() +
+  theme(axis.title = element_text(face = 'bold',
+                             size = 10),
+        title = element_text(face = 'italic',
+                             size = 14),
+        legend.title = element_text(face = 'plain')) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylab("Functional\n\nCAP2") + 
+  xlab("CAP1") +
+  stat_ellipse(geom = 'polygon', aes(fill=treatment, colour=treatment), alpha = 0.25)
+
+AS_plot_fd
+```
+
+Crocidura Functional CAP
+```{r echo=TRUE}
+cca_ord <- capscale(formula = CR_dissim_fd ~ CR_met$treatment)
+
+CAP_df <- as.data.frame(vegan::scores(cca_ord, display = "sites")) %>%
+  rownames_to_column('sample_id') %>%
+  left_join(CR_met, by = 'sample_id') %>%
+  column_to_rownames('sample_id')
+
+CR_plot_fd <- ggplot(CAP_df, aes(x = CAP1, y = CAP2, colour = treatment, fill = treatment)) +
+  geom_point() +
+  scale_colour_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
+  theme_classic() +
+  theme(axis.title = element_text(face = 'bold',
+                             size = 10),
+        axis.title.y = element_blank(),
+        title = element_text(face = 'italic',
+                             size = 14),
+        legend.title = element_text(face = 'plain')) +
+  geom_hline(yintercept = 0, linetype="dotted") + 
+  geom_vline(xintercept = 0, linetype="dotted") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  ylab("CAP2") + 
+  xlab("CAP1") +
+  stat_ellipse(geom = 'polygon', aes(fill=treatment, colour=treatment), alpha = 0.25)
+
+CR_plot_fd
+```
+
+Combine all CAP plots 
+```{r eval=FALSE, include=FALSE}
+my_combined_CAP <- ggarrange(AS_plot, CR_plot, AS_plot_pd, CR_plot_pd, AS_plot_fd, CR_plot_fd, labels = c('A', 'B', 'C', 'D', 'E', 'F'),
+                             ncol=2, nrow = 3, common.legend = T, legend = 'bottom', label.x = -0.018) + bgcolor("White") + border(color = "White", size = 0.8, linetype = NULL)
+
+my_combined_CAP
+
+ggsave('./figures/CAP_full.png', my_combined_CAP, width = 10, height = 7)
+ggsave('./figures/CAP_full.pdf', my_combined_CAP, width = 10, height = 7)
+```
+
+
+
+
+
+
+
+
+
