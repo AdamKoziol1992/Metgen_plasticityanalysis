@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-setwd('~/Documents/GitHub/Plasticity_experiment_AS-CR/Functional_barplots/')
+setwd('~/Documents/GitHub/Metgen_plasticityanalysis/Functional_barplots/')
 library(tidyverse)
 library(wesanderson)
 ```

@@ -7,7 +7,7 @@ output: html_document
 
 Setting the work environment
 ```{r include=FALSE}
-setwd('~/Documents/GitHub/Plasticity_Exp_Repo/hill_numbers/')
+setwd('~/Documents/GitHub/Metgen_plasticityanalysis/hill_numbers/')
 library(tidyverse)
 library(vegan)
 library(nlme)

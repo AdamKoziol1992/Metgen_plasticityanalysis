@@ -8,7 +8,7 @@ output: html_document
 ```{r include=FALSE}
 rm(list = ls(all.names = TRUE))
 gc()
-setwd('~/Documents/GitHub/Plasticity_Exp_Repo//Functional_redundancy')
+setwd('~/Documents/GitHub/Metgen_plasticityanalysis/Functional_redundancy')
 library(tidyverse)
 library(ape)
 library(pheatmap)

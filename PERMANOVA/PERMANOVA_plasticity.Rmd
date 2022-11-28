@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r include=FALSE}
-setwd('~/Documents/GitHub/Plasticity_Exp_Repo/Plasticity_Exp_Repo/PERMANOVA/')
+setwd('~/Documents/GitHub/Metgen_plasticityanalysis/PERMANOVA/')
 getwd()
 library(tidyverse)
 library(vegan)

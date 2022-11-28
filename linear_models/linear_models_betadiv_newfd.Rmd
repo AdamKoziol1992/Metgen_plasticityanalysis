@@ -8,7 +8,7 @@ output:
 ---
 
 ```{r include=FALSE}
-setwd('~/Documents/GitHub/Plasticity_Exp_Repo/linear_models')
+setwd('~/Documents/GitHub/Metgen_plasticityanalysis/linear_models')
 library(tidyverse)
 library(nlme)
 library(grid)
