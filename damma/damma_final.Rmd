@@ -1,0 +1,384 @@
+---
+title: "damma for crocidura and apodemus"
+author: "Adam_Koziol"
+date: '2022-06-20'
+output: html_document
+---
+set up script
+```{r include=FALSE}
+setwd('~/Documents/GitHub/Plasticity_experiment_AS-CR/damma/')
+library(DAMMA)
+library(tidyverse)
+library(stringr)
+library(data.table)
+library(dplyr)
+library(RColorBrewer)
+library(pheatmap)
+```
+
+Load data
+```{r include=FALSE}
+taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1)
+
+counts_CR <- read.csv('../data/CR_fixedcounts/TPM_CR.csv', row.names=1)
+
+annotations_file="./data/annotations.tsv"
+annotations <- fread(annotations_file)
+crocidura_completeness <- read.csv('/home/adam/Documents/GitHub/Plasticity_experiment_AS-CR/data/crocidura_binquality.csv', row.names = 1)
+
+functions_table <- pathway_table
+```
+
+
+```{r include=FALSE}
+distilled_table <- damma(annotations,functions_table,genomecol=2,keggcol=9,eccol=c(10,19),pepcol=12)
+write.csv(distilled_table, './outputsR/distilled_nonbinary_CR.csv')
+
+####Perform data-set correction
+#truncate bins into into the experimentally relevant bins
+crocidura_completeness <- crocidura_completeness[rownames(crocidura_completeness) %in% rownames(distilled_table),]
+#order the table into the same order
+crocidura_completeness <- crocidura_completeness[match(rownames(distilled_table),rownames(crocidura_completeness)),] %>%
+  rownames_to_column('magnames') %>%
+  select_at(-3)
+
+#perform the correction
+corrected_distilledtable <- damma_correction(distilled_table, crocidura_completeness[,1:2])
+```
+
+Crocidura convert into compounds
+```{r include=FALSE}
+distilled_table_compounds <- damma_compounds(corrected_distilledtable,functions_table)
+write.csv(distilled_table_compounds, './outputsR/distilled_nonbinary_compounds_CR.csv')
+
+distilled_table_compounds_bin <- damma_binary(distilled_table_compounds,threshold=0.9)
+write.csv(distilled_table_compounds_bin, './outputsR/distilled_binary_compounts_bin_CR.csv')
+```
+
+Crocidura convert into functions
+```{r include=FALSE}
+distilled_table_functions <- damma_functions(distilled_table_compounds,pathway_table)
+write.csv(distilled_table_functions, './outputsR/distilled_table_functions_CR.csv')
+
+distilled_table_functions_bin <- damma_functions(distilled_table_compounds_bin,pathway_table)
+write.csv(distilled_table_functions_bin, './outputsR/distilled_table_functions_bin_CR.csv')
+```
+
+
+```{r eval=FALSE, include=FALSE}
+################################Only if you need to re-run without re-running everything
+distilled_table_functions_summed <- read.csv('./outputsR/distilled_table_functions_CR_summed.csv', row.names = 1) %>%
+  .[rownames(counts_CR),]
+
+distilled_table_functions <- read.csv('./outputsR/distilled_table_functions_CR.csv', row.names = 1) %>%
+  .[rownames(counts_CR),]
+
+distilled_table_compounds <- read.csv('./outputsR/distilled_nonbinary_compounds_CR.csv') %>%
+  .[.$X %in% rownames(counts_CR),]
+
+distilled_table_functions_summed_bin <- damma_function_sum(distilled_table_compounds_bin, functions_table)
+write.csv(distilled_table_functions_summed_bin, './outputsR/distilled_table_functions_bin_CR_summed.csv')
+```
+
+Visualize heatmap
+```{r}
+#Prepare input table
+#Prepare input table
+compounds_table_df <- melt(distilled_table_compounds)
+colnames(compounds_table_df) <- c("MAGs","Code_compound","Fullness")
+compounds_table_df2 <- left_join(compounds_table_df, functions_table, by = 'Code_compound')
+compounds_table_df2$Function <- as.factor(compounds_table_df2$Function)
+
+#Plot heatmap
+CR_plot <- ggplot(compounds_table_df2, aes(x=MAGs, y=Code_compound, fill=Fullness, group=Function))+
+  geom_tile(colour="white", size=0.1)+
+  scale_y_discrete(guide = guide_axis(check.overlap = TRUE))+
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  #scale_fill_gradientn(limits = c(0,1), colours = rev(c("#781a25","#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#e6f598", "#abdda4", "#ddf1da","#f1faf0","#f4f4f4")))+
+  scale_fill_gradientn(limits = c(0,1), colours=brewer.pal(7, "YlGnBu"))+
+  facet_grid(Function ~ ., scales = "free", space = "free")+
+  theme_grey(base_size=8)+
+  theme(strip.text.y = element_text(angle = 0,
+                                    size = 12),axis.text.x=element_blank(),
+        axis.title.y = element_text(size = 10),
+        axis.title = element_text(face='italic')) +
+  ggtitle('C. russula')
+
+CR_plot
+ggsave('./figure/Crocidura_magbyfuctions.png', height = 7, width = 10)
+```
+
+```{r}
+#Prepare input table
+compounds_table_df <- melt(distilled_table_compounds_bin)
+colnames(compounds_table_df) <- c("MAGs","Code_compound","Fullness")
+compounds_table_df2 <- left_join(compounds_table_df, functions_table, by = 'Code_compound')
+compounds_table_df2$Function <- as.factor(compounds_table_df2$Function)
+
+#Plot heatmap
+CR_plot_bin <- ggplot(compounds_table_df2, aes(x=MAGs, y=Code_compound, fill=Fullness, group=Function))+
+  geom_tile(colour="white", size=0.1)+
+  scale_y_discrete(guide = guide_axis(check.overlap = TRUE))+
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  #scale_fill_gradientn(limits = c(0,1), colours = rev(c("#781a25","#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#e6f598", "#abdda4", "#ddf1da","#f1faf0","#f4f4f4")))+
+  scale_fill_gradientn(limits = c(0,1), colours=brewer.pal(7, "YlGnBu"))+
+  facet_grid(Function ~ ., scales = "free", space = "free")+
+  theme_grey(base_size=8)+
+  theme(strip.text.y = element_text(angle = 0,
+                                    size = 12),axis.text.x=element_blank(),
+        axis.title.y = element_text(size = 10),
+        axis.title = element_text(face='italic')) +
+  ggtitle('C. russula')
+
+CR_plot_bin
+ggsave('./figure/Crocidura_magbyfuctions_bin.png', height = 7, width = 10)
+```
+Increaser vs decreaser heatmaps
+```{r eval=FALSE, include=FALSE}
+increasers <- c("bin_s6.mtb27",
+                "bin_s36.vmb0",
+                "bin_s21.mxb8",
+                "bin_s14.cct6",
+                "bin_s13.vmb19",
+                "bin_s36.mxb13",
+                "bin_s34.cct50",
+                "bin_s13.cct72",
+                "bin_s6.vmb19",
+                "bin_s27.mtb32",
+                "bin_s13.vmb53",
+                "bin_s14.cct55_sub",
+                "bin_s27.vmb32")
+
+decreasers <- c("bin_s28.mxb31",
+                "bin_s19.cct18_sub",
+                "bin_s14.mtb52",
+                "bin_s19.vmb3",
+                "bin_s28.mtb8",
+                "bin_s23.cct42",
+                "bin_s36.mtb18",
+                "bin_s34.mtb22_sub",
+                "bin_s14.mtb51",
+                "bin_s14.vmb0",
+                "bin_s4.vmb27",
+                "bin_s34.cct27",
+                "bin_s21.mxb1",
+                "bin_s2.mxb1",
+                "bin_s35.cct57_sub",
+                "bin_s27.mtb39")
+
+bidirection <- c("bin_s6.mtb27",
+                "bin_s36.vmb0",
+                "bin_s21.mxb8",
+                "bin_s14.cct6",
+                "bin_s13.vmb19",
+                "bin_s36.mxb13",
+                "bin_s34.cct50",
+                "bin_s13.cct72",
+                "bin_s6.vmb19",
+                "bin_s27.mtb32",
+                "bin_s13.vmb53",
+                "bin_s14.cct55_sub",
+                "bin_s27.vmb32",
+                "bin_s28.mxb31",
+                "bin_s19.cct18_sub",
+                "bin_s14.mtb52",
+                "bin_s19.vmb3",
+                "bin_s28.mtb8",
+                "bin_s23.cct42",
+                "bin_s36.mtb18",
+                "bin_s34.mtb22_sub",
+                "bin_s14.mtb51",
+                "bin_s14.vmb0",
+                "bin_s4.vmb27",
+                "bin_s34.cct27",
+                "bin_s21.mxb1",
+                "bin_s2.mxb1",
+                "bin_s35.cct57_sub",
+                "bin_s27.mtb39")
+
+annotation_row <- bidirection %>%
+  as.data.frame %>%
+  rename('MAG' = '.') %>%
+  mutate(Direction = ifelse(MAG %in% increasers, 'Increasers', 'Decreasers')) %>%
+  left_join(taxa[,c(1,3)], by = c('MAG'='user_genome')) %>%
+  mutate(Phylum = str_remove_all(Phylum, '_A$')) %>%
+  column_to_rownames('MAG')
+
+distilled_increasers <- cr_zscores %>%
+  .[bidirection,]
+
+heatmap <- pheatmap(distilled_increasers,
+           fontsize_row = 12,
+           cluster_cols = F,
+           annotation_row = annotation_row,
+           fontsize_col = 12,
+           angle_col = 45,
+           cluster_rows = F,
+           cutree_rows = 2,
+           gaps_row = 13)
+ggsave('./figure/direction_heatmap.png', heatmap, width = 10, height = 7)
+ggsave('./figure/direction_heatmap.pdf', heatmap, width = 10, height = 7)
+
+```
+
+sample plot in damma 
+```{r eval=FALSE, include=FALSE}
+#Prepare input table
+compounds_table_df <- distilled_table_functions %>%
+  .[bidirection,] %>%
+  rownames_to_column('MAGs') %>% 
+  melt(.)
+colnames(compounds_table_df) <- c("MAGs","Compounds","Fullness")
+#Plot heatmap
+ggplot(compounds_table_df, aes(x=MAGs, y=Compounds, fill=Fullness))+
+  geom_tile(colour="white", size=0.1)+
+  facet_grid(~annotation_row$Direction, scales = 'free') +
+  scale_y_discrete(guide = guide_axis(check.overlap = TRUE))+
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  scale_fill_gradientn(limits = c(0,1), colours = rev(c("#781a25","#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#e6f598", "#abdda4", "#ddf1da","#f1faf0","#f4f4f4")))+
+  scale_fill_gradientn(limits = c(0,1), colours=brewer.pal(7, "YlGnBu"))+
+  theme_grey(base_size=8)+
+  theme_bw() +
+  theme(strip.text.y = element_text(angle = 0),
+        strip.background = element_blank(),
+        strip.text = element_text(size = 12,
+                                  face='bold'),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_blank())
+  
+        
+ggsave('./figure/Crocidura_increaser_decreasers.png', height = 7, width = 10)
+```
+
+```{r include=FALSE}
+annotations_file_apo="./data/annotations_apo.tsv"
+annotations_apo <- fread(annotations_file_apo)
+apodemus_completeness <- read.csv('/home/adam/Documents/GitHub/Plasticity_experiment_AS-CR/damma/data/apodemus_binquality.csv', sep='\t') %>%
+  select(c('Bin.Id', 'Completeness')) %>%
+  mutate(Bin.Id = str_c('bin_', Bin.Id))
+
+
+distilled_table_apo <- damma(annotations_apo,functions_table,genomecol=2,keggcol=9,eccol=c(10,19),pepcol=12)
+write.csv(distilled_table_apo, './outputsR/distilled_nonbinary_AS.csv')
+
+####Perform data-set correction
+#truncate bins into into the experimentally relevant bins
+apodemus_completeness <- apodemus_completeness[apodemus_completeness$Bin.Id %in% rownames(distilled_table_apo),]
+#order the table into the same order
+apodemus_completeness <- apodemus_completeness[match(rownames(distilled_table_apo),apodemus_completeness$Bin.Id),]
+#perform the correction
+corrected_distilledtable <- damma_correction(distilled_table_apo, apodemus_completeness)
+```
+
+
+```{r include=FALSE}
+distilled_table_compounds_apo <- damma_compounds(corrected_distilledtable,functions_table)
+write.csv(distilled_table_compounds_apo, './outputsR/distilled_nonbinary_compounds_AS.csv')
+
+distilled_table_compounds_bin_apo <- damma_binary(distilled_table_compounds_apo,threshold=0.9)
+write.csv(distilled_table_compounds_bin_apo, './outputsR/distilled_binary_compounts_bin_AS.csv')
+```
+
+
+```{r include=FALSE}
+distilled_table_functions_apo <- damma_functions(distilled_table_compounds_apo,functions_table)
+write.csv(distilled_table_functions_apo, './outputsR/distilled_table_functions_AS.csv')
+
+distilled_table_functions_bin_apo <- damma_functions(distilled_table_compounds_bin_apo,functions_table)
+write.csv(distilled_table_functions_bin_apo, './outputsR/distilled_table_functions_bin_AS.csv')
+```
+Indexing the functions by classification
+```{r}
+#Prepare input table
+compounds_table_df <- melt(distilled_table_compounds_apo)
+colnames(compounds_table_df) <- c("MAGs","Compounds","Fullness")
+compounds_table_df2 <- merge(compounds_table_df,functions_table,by.x="Compounds",by.y="Compound")
+compounds_table_df2$Function <- as.factor(compounds_table_df2$Function)
+compounds_table_df2$Function <- factor(compounds_table_df2$Function, levels=c("Dietary carbohydrate degradation","Dietary lipid degradation","Protein degradation","Mucin degradation","SCFA production","Organic anion production","Secondary bile acid production","Amino acid production","Amino acid derivative production","Vitamin production"))
+
+#Plot heatmap
+ggplot(compounds_table_df2, aes(x=MAGs, y=Compounds, fill=Fullness, group=Function))+
+  geom_tile(colour="white", size=0.1)+
+  scale_y_discrete(guide = guide_axis(check.overlap = TRUE))+
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  #scale_fill_gradientn(limits = c(0,1), colours = rev(c("#781a25","#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#e6f598", "#abdda4", "#ddf1da","#f1faf0","#f4f4f4")))+
+  scale_fill_gradientn(limits = c(0,1), colours=brewer.pal(7, "YlGnBu"))+
+  facet_grid(Function ~ ., scales = "free", space = "free")+
+  theme_grey(base_size=8)+
+  theme(strip.text.y = element_text(angle = 0),axis.text.x=element_blank())
+ggsave('./figure/Apodemus_magbyfuctions.png', height = 7, width = 10)
+```
+
+
+```{r}
+#Prepare input table
+compounds_table_df <- melt(distilled_table_compounds_bin_apo)
+colnames(compounds_table_df) <- c("MAGs","Compounds","Fullness")
+compounds_table_df2 <- left_join(compounds_table_df, functions_table, by = c('Compounds' = 'Compound'))
+compounds_table_df2$Function <- as.factor(compounds_table_df2$Function)
+compounds_table_df2$Function <- factor(compounds_table_df2$Function, levels=c("Polysaccharide degradation","Lipid degradation","Protein degradation","Mucin degradation","SCFA production","Organic anion production","Secondary bile acid production","Amino acid production","Amino acid derivative production","Vitamin production", "Sugar degradation"))
+
+#Plot heatmap
+AS_plot_bin <- ggplot(compounds_table_df2, aes(x=MAGs, y=Compounds, fill=Fullness, group=Function))+
+  geom_tile(colour="white", size=0.1)+
+  scale_y_discrete(guide = guide_axis(check.overlap = TRUE))+
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  #scale_fill_gradientn(limits = c(0,1), colours = rev(c("#781a25","#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#e6f598", "#abdda4", "#ddf1da","#f1faf0","#f4f4f4")))+
+  scale_fill_gradientn(limits = c(0,1), colours=brewer.pal(7, "YlGnBu"))+
+  facet_grid(Function ~ ., scales = "free", space = "free")+
+  theme_grey(base_size=8)+
+  theme(strip.text.y = element_text(angle = 0,
+                                    size = 12),axis.text.x=element_blank(),
+        axis.title = element_text(face='italic'),
+        axis.title.y = element_text(size = 10)) +
+  ggtitle('A. sylvaticus')
+
+AS_plot_bin
+ggsave('./figure/Apodemus_magbyfuctions_bin.png', height = 7, width = 10)
+```
+
+
+```{r}
+#Prepare input table
+compounds_table_df <- melt(distilled_table_compounds_apo)
+colnames(compounds_table_df) <- c("MAGs","Compounds","Fullness")
+compounds_table_df2 <- left_join(compounds_table_df, functions_table, by = c('Compounds' = 'Compound'))
+compounds_table_df2$Function <- as.factor(compounds_table_df2$Function)
+compounds_table_df2$Function <- factor(compounds_table_df2$Function, levels=c("Polysaccharide degradation","Lipid degradation","Protein degradation","Mucin degradation","SCFA production","Organic anion production","Secondary bile acid production","Amino acid production","Amino acid derivative production","Vitamin production", "Sugar degradation"))
+
+#Plot heatmap
+AS_plot <- ggplot(compounds_table_df2, aes(x=MAGs, y=Compounds, fill=Fullness, group=Function))+
+  geom_tile(colour="white", size=0.1)+
+  scale_y_discrete(guide = guide_axis(check.overlap = TRUE))+
+  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
+  #scale_fill_gradientn(limits = c(0,1), colours = rev(c("#781a25","#d53e4f", "#f46d43", "#fdae61", "#fee08b", "#e6f598", "#abdda4", "#ddf1da","#f1faf0","#f4f4f4")))+
+  scale_fill_gradientn(limits = c(0,1), colours=brewer.pal(7, "YlGnBu"))+
+  facet_grid(Function ~ ., scales = "free", space = "free")+
+  theme_grey(base_size=8)+
+  theme(strip.text.y = element_text(angle = 0,
+                                    size = 12),axis.text.x=element_blank(),
+        axis.title = element_text(face='italic'),
+        axis.title.y = element_text(size = 10)) +
+  ggtitle('A. sylvaticus')
+ggsave('./figure/Apodemus_magbyfuctions_bin.png', height = 7, width = 10)
+```
+
+Combined plots
+```{r}
+ggpubr::ggarrange(AS_plot, CR_plot, labels = c('A', 'B'), nrow=2, common.legend = T, legend = 'bottom') + ggpubr::bgcolor('White') + ggpubr::border("white")
+
+ggsave('./figure/combined_damma.png', width = 8, height = 12, dpi = 300)
+ggsave('./figure/combined_damma.pdf', width = 8, height = 12)
+```
+
+```{r}
+ggpubr::ggarrange(AS_plot_bin, CR_plot_bin, labels = c('A', 'B'), nrow=2, common.legend = T, legend = 'bottom') + ggpubr::bgcolor('White') + ggpubr::border("white")
+
+ggsave('./figure/combined_damma_bin.png', width = 8, height = 12, dpi = 300)
+ggsave('./figure/combined_damma_bin.pdf', width = 8, height = 12)
+```
+
+
+
+
+
