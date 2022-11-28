@@ -1,0 +1,23 @@
+---
+title: "Testing functional capacities make sense"
+author: "Adam_Koziol"
+date: "2022-08-24"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+setwd('~/Documents/GitHub/Plasticity_experiment_AS-CR/')
+```
+
+```{r}
+AS <- read.csv('./damma/outputsR/distilled_table_functions_AS.csv') %>%
+  pivot_longer(2:length(.), names_to = 'Functions', values_to = 'Capacities') %>%
+  group_by(Functions) %>%
+  summarise_each(~mean(.))
+CR <- read.csv('./damma/outputsR/distilled_table_functions_CR.csv') %>%
+  pivot_longer(2:length(.), names_to = 'Functions', values_to = 'Capacities') %>%
+  group_by(Functions) %>%
+  summarise_each(~mean(.))
+```
+

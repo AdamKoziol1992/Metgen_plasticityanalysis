@@ -1,0 +1,487 @@
+---
+title: "hill_numbers"
+author: "Adam_Koziol"
+date: "2022-11-03"
+output: html_document
+---
+
+Setting the work environment
+```{r include=FALSE}
+setwd('~/Documents/GitHub/Plasticity_Exp_Repo/hill_numbers/')
+library(tidyverse)
+library(vegan)
+library(nlme)
+library(hilldiv)
+library(ape)
+library(RColorBrewer)
+library(ape)
+library(cowplot)
+library(viridis) 
+library(grid)
+library(hillR)
+library(ggpubr)
+library(wesanderson)
+library(phytools)
+```
+
+Loading metadata and GTDB taxonomy files
+```{r}
+source('./neatness_functions.R') ###Load in auxillary functions for this data analysis
+metadata <- read.csv('../data/metadata.csv', header = T, row.names = 1)
+taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) 
+```
+
+Load Apodemus and Crocidura normalised counts and taxonomic data
+```{r}
+CR_TPM <- read.csv('../data/TPM_CR.csv')
+
+CR_tree <- read.tree(file='../data/gtdbtk.bac120.classify_CR.tree') %>%
+  keep.tip(CR_TPM$X) %>%
+  force.ultrametric(CR_tree,method="extend")
+
+AS_TPM <- read.csv('../data/AS_TPM.csv') %>%
+  dplyr::select(!ends_with('FAST'))
+
+AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>%
+  keep.tip(AS_TPM$X) %>%
+  force.ultrametric(AS_tree,method="extend")
+```
+
+Create the partitions for overall diversity analyses
+```{r}
+#####################Apodemus sylvaticus
+metadata_ord_AS <- which_ind_2keep(metadata, '^M')
+metadata_ord_CR <- which_ind_2keep(metadata, '^S')
+
+apodemus_tpm <- AS_TPM %>%
+  column_to_rownames('X')
+
+crocidura_tpm <- CR_TPM %>%
+  column_to_rownames('X')
+
+TPM_match_AS <- apodemus_tpm[,colnames(apodemus_tpm) %in% metadata_ord_AS$sample_id]
+TPM_match_CR <- crocidura_tpm[,colnames(crocidura_tpm) %in% metadata_ord_CR$sample_id]
+mouse_list <- as.character(unique(metadata_ord_AS$individual_id))
+shrew_list <- as.character(unique(metadata_ord_CR$individual_id))
+```
+
+Overall taxonomic diversity
+```{r}
+Total_beta_AS_td <- Create_dissims(input_df = TPM_match_AS,
+                                   input_metadata = metadata_ord_AS,
+                                   input_list = mouse_list,
+                                   stored_data = Total_beta_AS_td,
+                                   hillR_func = hill_taxa_parti,
+                                   extra_input = F)
+
+Total_beta_CR_td <- Create_dissims(input_df = TPM_match_CR,
+                                   input_metadata = metadata_ord_CR,
+                                   input_list = shrew_list,
+                                   stored_data = Total_beta_CR_td,
+                                   hillR_func = hill_taxa_parti,
+                                   extra_input = F)
+
+Total_beta_td <- rbind(Total_beta_AS_td, Total_beta_CR_td) %>%
+  as_tibble
+
+Total_beta_td <- make_overall_csv(Total_beta_td)
+write.csv(Total_beta_td, './outputsR/total_betadiversity_td.csv')
+
+Overall_beta <- plot_overall_betas(Total_beta_td)
+Overall_beta
+ggsave('./figures/individual_betadiversity_td.png', width = 10, height = 7)
+ggsave('./figures/individual_betadiversity_td.pdf', width = 10, height = 7)
+```
+
+Overall_phylogenetic diversity
+```{r}
+Total_beta_AS_pd <- Create_dissims(input_df = TPM_match_AS,
+                                   input_metadata = metadata_ord_AS,
+                                   input_list = mouse_list,
+                                   stored_data = Total_beta_AS_pd,
+                                   hillR_func = hill_phylo_parti,
+                                   extra_input = T,
+                                   extra_file = AS_tree)
+
+Total_beta_CR_pd <- Create_dissims(input_df = TPM_match_CR,
+                                   input_metadata = metadata_ord_CR,
+                                   input_list = shrew_list,
+                                   stored_data = Total_beta_CR_pd,
+                                   hillR_func = hill_phylo_parti,
+                                   extra_input = T,
+                                   extra_file = CR_tree)
+
+Total_beta_pd <- rbind(Total_beta_AS_pd, Total_beta_CR_pd) %>%
+  as_tibble 
+
+Total_beta_pd <- make_overall_csv(Total_beta_pd)
+write.csv(Total_beta_pd, './outputsR/total_betadiversity_pd.csv')
+
+Overall_beta <- plot_overall_betas(Total_beta_pd)
+Overall_beta
+ggsave('./figures/individual_betadiversity_pd.png', width = 10, height = 7)
+ggsave('./figures/individual_betadiversity_pd.pdf', width = 10, height = 7)
+```
+
+Overall functional diversity
+####Functional diversity plots CR
+```{r include=FALSE}
+Crocidura_products <- read.csv('../damma/outputsR/distilled_table_functions_CR.csv', sep=',', row.names = 1) %>%
+  .[row.names(crocidura_tpm),]
+####Check for differences in rows
+setdiff(Crocidura_products$X, row.names(crocidura_tpm))
+
+####Load the functional traits for Apodemus
+#####Apodemus 
+Apodemus_products <- read.csv('../damma/outputsR/distilled_table_functions_AS.csv', sep=',', row.names = 1) %>%
+  .[row.names(apodemus_tpm),]
+
+apodemus_products <- Apodemus_products
+
+####Check for differences in rows
+setdiff(row.names(apodemus_products), row.names(apodemus_tpm))
+```
+
+Overall functional diversity plots
+```{r}
+Total_beta_AS_fd <- Create_dissims(input_df = TPM_match_AS,
+                                   input_metadata = metadata_ord_AS,
+                                   input_list = mouse_list,
+                                   stored_data = Total_beta_AS_fd,
+                                   hillR_func = hill_func_parti,
+                                   extra_input = TRUE,
+                                   extra_file = apodemus_products)
+
+####Create the dissimilarity table
+Total_beta_CR_fd <- Create_dissims(input_df = TPM_match_CR,
+                                   input_metadata = metadata_ord_CR,
+                                   input_list = shrew_list,
+                                   stored_data = Total_beta_CR_fd,
+                                   hillR_func = hill_func_parti,
+                                   extra_input = TRUE,
+                                   extra_file = Crocidura_products)
+
+Total_beta_fd <- rbind(Total_beta_AS_fd, Total_beta_CR_fd) %>%
+  as_tibble
+
+Total_beta_fd <- make_overall_csv(Total_beta_fd)
+write.csv(Total_beta_fd, './outputsR/total_betadiversity_fd.csv')
+
+Overall_beta <- plot_overall_betas(Total_beta_fd)
+Overall_beta
+ggsave('./figures/individual_betadiversity_fd.png', width = 10, height = 7)
+ggsave('./figures/individual_betadiversity_fd.pdf', width = 10, height = 7)
+```
+
+Check Alpha diversity indices across different treatments and plot the diversity metrics
+```{r}
+Alpha_div_td_AS <- hill_taxa(t(apodemus_tpm), q=1) %>%
+  as.data.frame() %>%
+  rename('diversity' = '.') %>%
+  rownames_to_column('sample_id') %>%
+  left_join(metadata, by = 'sample_id') %>%
+  mutate(treatment = factor(treatment, levels=c('Day1','Acc','Heat','Cold','Diet')))
+
+Alpha_div_td_CR <- hill_taxa(t(crocidura_tpm), q=1) %>%
+  as.data.frame() %>%
+  rename('diversity' = '.') %>%
+  rownames_to_column('sample_id') %>%
+  left_join(metadata, by = 'sample_id') %>%
+  mutate(treatment = factor(treatment, levels=c('Day1','Acc','Heat','Cold','Diet')))
+
+Alpha_combined <- rbind(Alpha_div_td_AS, Alpha_div_td_CR)
+
+write.csv(Alpha_combined, './outputsR/diversity_table.csv')
+
+alpha <- ggplot(unique(Alpha_combined), aes(x=species, y=diversity, fill=species)) +
+  facet_wrap(~treatment, nrow = 1) +
+  geom_boxplot(width=0.5, aes(fill=species),size=0.25) +
+  geom_jitter(alpha=0.2, position = position_jitter(0.2), size=0.5) +
+  scale_fill_manual(values=c('#fbc958', '#5c7f9d')) +
+  theme(axis.text.x = element_text(angle=45,
+                                   vjust=0.5),
+        panel.background = element_blank(),
+        strip.background = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        legend.title = element_text(size = 12,
+                                    face = 'bold'),
+        legend.text = element_text(size = 10),
+        axis.title.y = element_text(size = 12,
+                                    face = 'bold'),
+        strip.text.x = element_text(size = 8),
+        legend.position = 'bottom',
+        legend.key=element_rect(fill="white")) +
+  labs(fill='Species') +
+  ylab('Alpha diversity')
+alpha
+```
+
+Alpha diversities for phylogenetic metrics
+```{r}
+Alpha_div_pd_AS <- hill_phylo(t(apodemus_tpm), tree = AS_tree, q=1) %>%
+  as.data.frame() %>%
+  rename('diversity' = '.') %>%
+  rownames_to_column('sample_id') %>%
+  left_join(metadata, by = 'sample_id') %>%
+  mutate(treatment = factor(treatment, levels=c('Day1','Acc','Heat','Cold','Diet')))
+
+Alpha_div_pd_CR <- hill_phylo(t(crocidura_tpm), tree = CR_tree, q=1) %>%
+  as.data.frame() %>%
+  rename('diversity' = '.') %>%
+  rownames_to_column('sample_id') %>%
+  left_join(metadata, by = 'sample_id') %>%
+  mutate(treatment = factor(treatment, levels=c('Day1','Acc','Heat','Cold','Diet')))
+
+Alpha_combined_pd <- rbind(Alpha_div_pd_AS, Alpha_div_pd_CR)
+
+write.csv(Alpha_combined_pd, './outputsR/diversity_table_pd.csv')
+
+alpha_pd <- ggplot(unique(Alpha_combined_pd), aes(x=species, y=diversity, fill=species)) +
+  facet_wrap(~treatment, nrow = 1) +
+  geom_boxplot(width=0.5, aes(fill=species), size=0.5, alpha = 0.85) +
+  geom_jitter(alpha=0.2, position=position_jitter(0.2), size=0.5) +
+  scale_fill_manual(values=c('#fbc958', '#5c7f9d')) +
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle=45,
+                                   vjust=0.5),
+        strip.background = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position = 'none',
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        strip.text.x = element_text(size = 8)) +
+  labs(fill='Treatment') +
+  ylab('')
+alpha_pd
+```
+
+Alpha diversities for functional metrics
+```{r}
+Alpha_div_fd_AS <- hill_func(t(apodemus_tpm), apodemus_products, q=1) %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column('sample_id') %>%
+  left_join(metadata, by = 'sample_id') %>%
+  mutate(treatment = factor(treatment, levels=c('Day1','Acc','Heat','Cold','Diet')))
+
+Alpha_div_fd_CR <- hill_func(t(crocidura_tpm), Crocidura_products, q=1) %>%
+  t() %>%
+  as.data.frame() %>%
+  rownames_to_column('sample_id') %>%
+  left_join(metadata, by = 'sample_id') %>%
+  mutate(treatment = factor(treatment, levels=c('Day1','Acc','Heat','Cold','Diet')))
+
+Alpha_combined_fd <- rbind(Alpha_div_fd_AS, Alpha_div_fd_CR)
+
+write.csv(Alpha_combined_fd, './outputsR/diversity_table_fd.csv')
+
+alpha_fd <- ggplot(Alpha_combined_fd, aes(x=species, y=Q, fill=species)) +
+  facet_grid(~treatment, scales = 'free') +
+  geom_boxplot(width=0.5, aes(fill=species), size=0.5, alpha = 0.7) +
+  geom_jitter(alpha=0.2, position=position_jitter(0.2), size=0.5) +
+  scale_fill_manual(values=c('#fbc958', '#5c7f9d')) +
+  theme(panel.background = element_blank(),
+        strip.background = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = unit(c(0,0,0,0), "cm"),
+        strip.text.x = element_text(size = 8),
+        axis.text.x = element_text(angle = 45)) +
+  labs(fill='Disturbance') +
+  ylab('') +
+  ylim(0,7.5)
+alpha_fd
+```
+
+Taxonomic beta diversities
+```{r}
+correct_order <- c("Day_Acc_AS", "Day_Acc_CR", "Acc_Heat_AS", "Acc_Heat_CR","Heat_Cold_AS","Heat_Cold_CR","Cold_Diet_AS", "Cold_Diet_CR")
+
+dissim_table_AS <- beta_div_func(input_df = TPM_match_AS,
+                                 input_metadata = metadata_ord_AS,
+                                 input_list = mouse_list,
+                                 input_function = hill_taxa_parti,
+                                 extra_input = F,
+                                 phylo = F) %>%
+  mutate(Treatment_pair = str_remove(Treatment_pair, '[0-9]$'),
+         Treatment_pair = str_remove(Treatment_pair, '[0-9]'),
+         Species = rep('AS'))
+ 
+
+dissim_table_CR <- beta_div_func(input_df = TPM_match_CR,
+                                 input_metadata = metadata_ord_CR,
+                                 input_list = shrew_list,
+                                 input_function = hill_taxa_parti,
+                                 extra_input = F,
+                                 phylo = F) %>%
+  mutate(Treatment_pair = str_remove(Treatment_pair, '[0-9]$'),
+         Treatment_pair = str_remove(Treatment_pair, '[0-9]'),
+         Species = rep('CR'))
+
+Beta_combined_td <- rbind(dissim_table_AS, dissim_table_CR) %>%
+  mutate(treatmentWspecies = str_c(Treatment_pair, Species, sep = '_'),
+         treatmentWspecies = str_replace(treatmentWspecies, 'Day_Acc1_AS', 'Day_Acc_AS')) %>%
+  mutate(treatmentWspecies = str_replace(treatmentWspecies, 'Day_Acc1_CR', 'Day_Acc_CR'),
+         treatmentWspecies = factor(treatmentWspecies, levels=correct_order),
+         beta = 1 - local_similarity)
+
+write.csv(Beta_combined_td, './outputsR/dissimilarity_combined_td.csv')
+
+tax_beta <- ggplot(Beta_combined_td, aes(x=treatmentWspecies, y=beta, fill=Species)) +
+  geom_boxplot(width=0.5) +
+  geom_jitter(alpha=0.2, position = position_jitter(0.2), size=0.5) +
+  scale_fill_manual(values=c('#fbc958', '#5c7f9d')) +
+  theme(axis.text.x = element_text(angle=45,
+                                   vjust=0.5,
+                                   hjust=0.3),
+        panel.background = element_blank(),
+        axis.title.x = element_text(size=12,
+                                    face='bold'),
+        plot.margin = unit(c(0.75,0,0,0), "cm"),
+        legend.title = element_text(size = 12,
+                                    face = 'bold'),
+        legend.text = element_text(size = 10),
+        axis.title.y = element_text(size = 12,
+                                   face = 'bold'),
+        legend.position = 'bottom') +
+  ylim(0, 1) +
+  ylab('Beta diversity') +
+  xlab('Neutral') +
+  labs(fill='Species') +
+  scale_x_discrete(breaks=c('Day_Acc_AS', 'Acc_Heat_AS', 'Heat_Cold_AS', 'Cold_Diet_AS'),
+                   labels=c('Day1_Acc', 'Acc_Heat', 'Heat_Cold', 'Cold_Diet'))
+
+tax_beta
+
+```
+
+Phylogenetic beta diversities
+```{r}
+dissim_table_AS_pd <- beta_div_func(input_df = TPM_match_AS,
+                                 input_metadata = metadata_ord_AS,
+                                 input_list = mouse_list,
+                                 stored_data = dissim_table_AS,
+                                 input_function = hill_phylo_parti,
+                                 extra_input = T,
+                                 extra_file = AS_tree,
+                                 phylo = T) %>%
+  mutate(Treatment_pair = str_remove(Treatment_pair, '[0-9]$'),
+         Treatment_pair = str_remove(Treatment_pair, '[0-9]'),
+         Species = rep('AS'))
+
+dissim_table_CR_pd <- beta_div_func(input_df = TPM_match_CR,
+                                 input_metadata = metadata_ord_CR,
+                                 input_list = shrew_list,
+                                 stored_data = dissim_table_CR,
+                                 input_function = hill_phylo_parti,
+                                 extra_input = T,
+                                 extra_file = CR_tree,
+                                 phylo = T) %>%
+  mutate(Treatment_pair = str_remove(Treatment_pair, '[0-9]$'),
+         Treatment_pair = str_remove(Treatment_pair, '[0-9]'),
+         Species = rep('CR'))
+
+Beta_combined_pd <- rbind(dissim_table_AS_pd, dissim_table_CR_pd) %>%
+  mutate(treatmentWspecies = str_c(Treatment_pair, Species, sep = '_'),
+         treatmentWspecies = str_replace(treatmentWspecies, 'Day_Acc1_AS', 'Day_Acc_AS')) %>%
+  mutate(treatmentWspecies = str_replace(treatmentWspecies, 'Day_Acc1_CR', 'Day_Acc_CR'),
+         treatmentWspecies = factor(treatmentWspecies, levels=correct_order),
+         beta = 1 - local_similarity)
+
+write.csv(Beta_combined_pd, './outputsR/Beta_combined_pd.csv')
+
+pd_beta <- ggplot(Beta_combined_pd, aes(x=treatmentWspecies, y=beta, fill=Species)) +
+  geom_boxplot(width=0.5, alpha = 0.85) +
+  geom_jitter(alpha=0.2, position=position_jitter(0.2), size=0.5) +
+  scale_fill_manual(values=c('#fbc958', '#5c7f9d')) +
+  theme(panel.background = element_blank(),
+        axis.text.x = element_text(angle=45,
+                                   vjust=0.5,
+                                   hjust=0.3),
+        legend.position = 'none',
+        axis.title.x = element_text(size=12,
+                                    face = 'bold'),
+        plot.margin=margin(0.75, 0, 0, 0,unit="cm"),
+        axis.title.y = element_blank()) +
+  ylim(0, 1) +
+  labs(fill='Species') +
+  xlab('Phylogenetic') +
+  scale_x_discrete(breaks=c('Day_Acc_AS', 'Acc_Heat_AS', 'Heat_Cold_AS', 'Cold_Diet_AS'),
+                   labels=c('Day1-Acc', 'Acc-Heat', 'Heat-Cold', 'Cold-Diet'))
+pd_beta
+```
+Functional beta diversities
+```{r}
+dissim_table_AS_fd <- beta_div_func(input_df = TPM_match_AS,
+                                 input_metadata = metadata_ord_AS,
+                                 input_list = mouse_list,
+                                 input_function = hill_func_parti,
+                                 extra_input = T,
+                                 extra_file = apodemus_products,
+                                 phylo = F) %>%
+  mutate(Treatment_pair = str_remove(Treatment_pair, '[0-9]$'),
+         Treatment_pair = str_remove(Treatment_pair, '[0-9]'),
+         Species = rep('AS'))
+
+dissim_table_CR_fd <- beta_div_func(input_df = TPM_match_CR,
+                                 input_metadata = metadata_ord_CR,
+                                 input_list = shrew_list,
+                                 input_function = hill_func_parti,
+                                 extra_input = T,
+                                 extra_file = Crocidura_products,
+                                 phylo = F) %>%
+  mutate(Treatment_pair = str_remove(Treatment_pair, '[0-9]$'),
+         Treatment_pair = str_remove(Treatment_pair, '[0-9]'),
+         Species = rep('CR'))
+
+Beta_combined_fd <- rbind(dissim_table_AS_fd, dissim_table_CR_fd) %>%
+  mutate(treatmentWspecies = str_c(Treatment_pair, Species, sep = '_'),
+         treatmentWspecies = str_replace(treatmentWspecies, 'Day_Acc1_AS', 'Day_Acc_AS')) %>%
+  mutate(treatmentWspecies = str_replace(treatmentWspecies, 'Day_Acc1_CR', 'Day_Acc_CR'),
+         treatmentWspecies = factor(treatmentWspecies, levels=correct_order),
+         beta = 1 - local_similarity)
+
+write.csv(Beta_combined_fd, './outputsR/dissimilarity_combined_fd.csv')
+
+fd_beta <- ggplot(Beta_combined_fd, aes(x=treatmentWspecies, y=beta, fill=Species)) +
+  geom_boxplot(width=0.5, alpha =0.7) +
+  geom_jitter(alpha=0.2, position=position_jitter(0.2), size=0.5) +
+  scale_fill_manual(values=c('#fbc958', '#5c7f9d')) +
+  theme(panel.background = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_text(angle = 45,
+                                   vjust=0.5,
+                                   hjust=0.3),
+        axis.title.x = element_text(size = 12,
+                                    face = 'bold'),
+        legend.position = 'none',
+        plot.margin = unit(c(0.75,0,0,0), "cm"),
+        axis.title.y = element_blank()) +
+  labs(fill='Species') +
+  xlab('Functional') +
+  ylim(c(0,1)) +
+  scale_x_discrete(breaks=c('Day_Acc_AS', 'Acc_Heat_AS', 'Heat_Cold_AS', 'Cold_Diet_AS'),
+                   labels=c('Day1-Acc', 'Acc-Heat', 'Heat-Cold', 'Cold-Diet'))
+
+fd_beta
+
+```
+
+```{r}
+rm_legend <- function(p){p + theme(legend.position = "none")}
+
+alpha_beta_plots <- ggarrange(rm_legend(alpha), rm_legend(alpha_pd), rm_legend(alpha_fd), tax_beta, rm_legend(pd_beta),  rm_legend(fd_beta), 
+          labels=c('A', 'B', 'C', 'D', 'E', 'F'),
+          ncol=3, nrow=2,
+          common.legend = T,
+          legend = 'bottom')
+alpha_beta_plots
+
+ggsave('./figures/alpha_beta_plots.pdf', alpha_beta_plots, height = 7, width = 10, dpi = 1000)
+ggsave('./figures/alpha_beta_plots.png', alpha_beta_plots, height = 7, width = 10, dpi = 1000)
+ggsave('./figures/alpha_beta_plots.tiff', compression = 'lzw')
+
+```
+
+```{r}
+sessionInfo()
+```
