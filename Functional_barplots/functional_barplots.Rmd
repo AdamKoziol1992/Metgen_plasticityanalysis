@@ -10,16 +10,19 @@ setwd('~/Documents/GitHub/Metgen_plasticityanalysis/Functional_barplots/')
 library(tidyverse)
 library(wesanderson)
 ```
-Data
+Load the data files in
 ```{r}
-CR <- read.csv('../data/functionalbarplots_CR.csv') %>%
+CR <- read.csv('../data/functional_barplot_CR') %>%
   mutate(Disturbance = case_when(xx == 0 ~ 'Day1',
                                  xx == 7 ~ 'Acc',
                                  xx == 19 ~ 'Heat',
                                  xx == 33 ~ 'Cold',
                                  xx == 45 ~ 'Diet'),
          Disturbance = factor(Disturbance, levels=c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')),
-         Species = rep('CR'))
+         Species = rep('CR'),
+         pathway = if_else(str_detect(Function, 'degradation'), 'degradation', 'biosynthesis')) %>% 
+  select(-X)
+
 AS <- read.csv('../data/functionalbarplots_AS.csv') %>%
   filter(xx != 52) %>%
   mutate(Disturbance = case_when(xx == 0 ~ 'Day1',
@@ -28,126 +31,50 @@ AS <- read.csv('../data/functionalbarplots_AS.csv') %>%
                                  xx == 33 ~ 'Cold',
                                  xx == 45 ~ 'Diet'),
          Disturbance = factor(Disturbance, levels=c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')),
-         Species = rep('AS'))
+         Species = rep('AS'),
+         pathway = if_else(str_detect(Function, 'degradation'), 'degradation', 'biosynthesis')) %>% 
+  select(-X)
 ```
 
+Combined data for both species and re-order based on degradation and biosynthesis pathways
 ```{r}
-ggplot(CR, aes(y=me, x=Disturbance, fill=Disturbance)) +
-  facet_wrap(~Function, nrow=4, ncol=3) +
-  geom_histogram(stat="identity") +
-  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
-  theme_minimal() +
-  ylim(0,0.8) +
-  geom_errorbar(aes(x=Disturbance, ymax=hi, ymin=lo),size=0.1) +
-  ylab('Community weighted mean')
-```
-```{r}
-ggplot(AS, aes(y=me, x=Disturbance, fill=Disturbance)) +
-  facet_wrap(~Function, nrow=4, ncol=3) +
-  geom_histogram(stat="identity") +
-  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
-  theme_minimal() +
-  ylim(0,0.8) +
-  geom_errorbar(aes(x=Disturbance, ymax=hi, ymin=lo),size=0.1) +
-  ylab('Community weighted mean')
-```
-Try it combined
-```{r}
-
-
-ggplot(combined, aes(y=me, x=Disturbance, fill=Disturbance)) +
-  facet_wrap(~Function+Species, scale = 'free', ncol=4) +
-  geom_bar(stat='identity') +
-  scale_fill_manual(values=wes_palette(n=6, name="IsleofDogs1")) +
-  theme_minimal() +
-  ylim(0,0.8) +
-  geom_errorbar(aes(x=Disturbance, ymax=hi, ymin=lo),size=0.1) +
-  ylab('Community weighted mean')
-
-ggsave('./Figures/test.png', height = 10, width =10)
-```
-
-
-```{r}
-ggplot(combined, aes(x=Disturbance, y=Function, fill=me))+
-  geom_tile(colour="white", size=0.1)+
-  facet_grid(~Species, scales = 'free') +
-  scale_y_discrete(guide = guide_axis(check.overlap = TRUE))+
-  scale_x_discrete(guide = guide_axis(check.overlap = TRUE))+
-  scale_fill_gradient(
-  low = "#5C84AF",
-  high = "#C23B22",
-  space = "Lab",
-  guide = "colourbar",
-  aesthetics = "fill"
-) +
-  theme_bw() +
-  theme(strip.text.y = element_text(angle = 0),
-        strip.background = element_blank(),
-        strip.text = element_text(size = 12,
-                                  face='bold'),
-        axis.text.y = element_text(size = 10)) +
-  geom_text(aes(label = CI), size = 2, position = position_nudge(y=-0.1))
-```
-
-```{r}
-
 combined <- rbind(AS, CR) %>%
   mutate(hi = as.numeric(round(hi, digits = 2)),
          lo = as.numeric(round(lo, digits = 2)),
          CI = str_c(lo, hi, sep = ','),
-         dist_spec = Function,
          Disturbance = factor(Disturbance, levels=c('Diet', 'Cold', 'Heat', 'Acc', 'Day1')),
-         dist_spec=factor(dist_spec, levels = c("Amino.acid.production_AS",
-                                                "Amino.acid.production_CR",
-                                                "Amino.acid.derivative.production_AS",
-                                                "Amino.acid.derivative.production_CR",
-                                                "SCFA.production_AS",
-                                                "SCFA.production_CR",
-                                                "Secondary.bile.acid.production_AS",
-                                                "Secondary.bile.acid.production_CR",
-                                                "Organic.anion.production_AS",
-                                                "Organic.anion.production_CR",
-                                                "Vitamin.production_AS",
-                                                "Vitamin.production_CR",
-                                                "Lipid.degradation_AS",
-                                                "Lipid.degradation_CR",
-                                                "Mucin.degradation_AS",
-                                                "Mucin.degradation_CR",
-                                                "Polysaccharide.degradation_AS",
-                                                "Polysaccharide.degradation_CR",
-                                                "Protein.degradation_AS",
-                                                "Protein.degradation_CR",
-                                                "Sugar.degradation_AS",
-                                                "Sugar.degradation_CR")))
+         dist_spec = as.factor(Function),
+         dist_spec = fct_reorder(dist_spec, pathway, .desc = T))
+```
 
-
-
-
+Create the plot
+```{r}
 ggplot(combined, aes(x=me, y=Disturbance, colour = Disturbance)) +
   facet_wrap(.~dist_spec, ncol =2, scale = 'fixed', strip.position = 'left',
-             labeller = as_labeller(c('Polysaccharide.degradation_AS' = 'Polysaccharide\ndegradation',
-                                      "Sugar.degradation_AS" = 'Sugar\ndegradation',
-                                      "Lipid.degradation_AS" = 'Lipid\ndegradation',
-                                      "Mucin.degradation_AS" = 'Mucin\ndegradation',
-                                      "SCFA.production_AS" = 'SCFA\nproduction',
-                                      "Secondary.bile.acid.production_AS" = "Secondary\nbile acid\nproduction",
-                                      "Protein.degradation_AS" = "Protein\ndegradation",
-                                      "Organic.anion.production_AS" = 'Organic anion\nproduction',
-                                      "Amino.acid.production_AS" = 'Amino acid\nproduction',
-                                      'Amino.acid.derivative.production_AS' = 'Amino acid\nderivative\nproduction',
-                                      "Vitamin.production_AS" = 'Vitamin\nproduction',
-                                      'Polysaccharide.degradation_CR' = '',
-                                      "Sugar.degradation_CR" = '',
-                                      "Lipid.degradation_CR" = '',
-                                      "Mucin.degradation_CR" = '',
-                                      "SCFA.production_CR" = '',
-                                      "Protein.degradation_CR" = '',
-                                      "Secondary.bile.acid.production_CR" = "",
-                                      "Organic.anion.production_CR" = '',
-                                      "Amino.acid.production_CR" = '',
-                                      'Amino.acid.derivative.production_CR' = '',
-                                      "Vitamin.production_CR" = ''))) +
+             labeller = as_labeller(c("(Poly)amine_degradation_AS" = '(Poly)amine/ndegradation', #
+                                      "Lipid_degradation_AS"  = 'Lipid/ndegradation', #
+                                      "Nitrogen_compound_degradation_AS" = 'Nitrogen compound/ndegradation', #
+                                      "Polysaccharide_degradation_AS"  = 'Polysaccharide/ndegradation', #
+                                      "Protein_degradation_AS" = 'Protein/ndegradation', #
+                                      "Sugar_degradation_AS" = 'Sugar/ndegradation',#
+                                      "Amino_acid_biosynthesis_AS" = "Amino acid/nbiosynthesis", #
+                                      "Amino_acid_derivative_biosynthesis_AS" = 'Amino acid/nderivative/nbiosynthesis', #
+                                      "Organic_anion_biosynthesis_AS" = 'Organic anion/nbiosynthesis', #
+                                      "SCFA_biosynthesis_AS" = 'SCFA/nbiosynthesis', #
+                                      "Secondary_bile_acid_biosynthesis_AS" = 'Secondary/nbile acid/nbiosynthesis',
+                                      "Vitamin_biosynthesis_AS" = 'Vitamin/nbiosynthesis',
+                                      "(Poly)amine_degradation_CR" = '', #
+                                      "Lipid_degradation_CR"  = '', #
+                                      "Nitrogen_compound_degradation_CR" = '', #
+                                      "Polysaccharide_degradation_CR"  = '', #
+                                      "Protein_degradation_CR" = '', #
+                                      "Sugar_degradation_CR" = '',#
+                                      "Amino_acid_biosynthesis_CR" = "", #
+                                      "Amino_acid_derivative_biosynthesis_CR" = '', #
+                                      "Organic_anion_biosynthesis_CR" = '', #
+                                      "SCFA_biosynthesis_CR" = '', #
+                                      "Secondary_bile_acid_biosynthesis_CR" = '',
+                                      "Vitamin_biosynthesis_CR" = ''))) + #
   geom_point(aes(colour = Disturbance), size = 2) +
   scale_colour_manual(values=c("#9986A5", "#79402E", "#CCBA72", "#0F0D0E", "#a9a9a9"), 
                       breaks=c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')) +
@@ -177,62 +104,6 @@ ggsave('./Figures/combinedpoints.png', height = 10, width = 10)
 ggsave('./Figures/combinedpoints.pdf', height = 10, width = 10)
 ggsave('./Figures/combinedpoints.tiff', height = 10, width = 10, compression = 'lzw')
 ```
-For the conference
-```{r}
-ggplot(combined, aes(x=me, y=Disturbance, colour = Disturbance)) +
-  facet_wrap(.~dist_spec, ncol =2, scale = 'fixed', strip.position = 'left',
-             labeller = as_labeller(c('Polysaccharide.degradation_AS' = 'Polysacc-\nharide\ndegradation',
-                                      "Sugar.degradation_AS" = 'Sugar\ndegradation',
-                                      "Lipid.degradation_AS" = 'Lipid\ndegradation',
-                                      "Mucin.degradation_AS" = 'Mucin\ndegradation',
-                                      "SCFA.production_AS" = 'SCFA\nproduction',
-                                      "Secondary.bile.acid.production_AS" = "Secondary\nbile acid\nproduction",
-                                      "Protein.degradation_AS" = "Protein\ndegradation",
-                                      "Organic.anion.production_AS" = 'Organic \nanion\nproduction',
-                                      "Amino.acid.production_AS" = 'Amino acid\nproduction',
-                                      'Amino.acid.derivative.production_AS' = 'Amino acid\nderivative\nproduction',
-                                      "Vitamin.production_AS" = 'Vitamin\nproduction',
-                                      'Polysaccharide.degradation_CR' = '',
-                                      "Sugar.degradation_CR" = '',
-                                      "Lipid.degradation_CR" = '',
-                                      "Mucin.degradation_CR" = '',
-                                      "SCFA.production_CR" = '',
-                                      "Protein.degradation_CR" = '',
-                                      "Secondary.bile.acid.production_CR" = "",
-                                      "Organic.anion.production_CR" = '',
-                                      "Amino.acid.production_CR" = '',
-                                      'Amino.acid.derivative.production_CR' = '',
-                                      "Vitamin.production_CR" = ''))) +
-  geom_point(aes(colour = Disturbance), size = 2) +
-  scale_colour_manual(values=c("#9986A5", "#79402E", "#CCBA72", "#0F0D0E", "#a9a9a9"), 
-                      breaks=c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')) +
-  xlim(0,0.8) +
-  ylab('Functions') +
-  xlab('Metabolic Capacity Index (MCI)') +
-  geom_errorbar(aes(xmax=hi, xmin=lo),size=0.5) +
-  labs(title = 'A.sylvaticus                                      C.russula') +
-  theme(strip.placement = "outside",
-        strip.text.x = element_blank(),
-        strip.text.y = element_text(size=10.5),
-        strip.background = element_blank(),
-        panel.background = element_blank(),
-        axis.text.y = element_text(size = 10),
-        panel.grid = element_line(color = "black",
-                                  size = 0.05,
-                                  linetype = 2),
-        plot.title = element_text(face='bold.italic',
-                                  size=20),
-        legend.key = element_blank(),
-        legend.text = element_text(size = 18),
-        legend.title = element_text(size = 20,
-                                    face = 'bold'),
-        axis.title = element_text(size = 20))
-  
-ggsave('./Figures/combinedpoints_conference.pdf', height = 10, width = 10)
-ggsave('./Figures/combinedpoints_conference.tiff', height = 10, width = 10, compression = 'lzw')
-```
-
-
 
 ```{r}
 sessioninfo::session_info()
