@@ -225,9 +225,11 @@ plot(x = Fit, y = E,
      main = "Residuals versus fitted values")
 hist(E, nclreduns = 15)
 ```
+
 ```{r eval=FALSE, include=FALSE}
 summary(model_redun.d)
 ```
+
 ```{r}
 anova(model_redun.d)
 ```

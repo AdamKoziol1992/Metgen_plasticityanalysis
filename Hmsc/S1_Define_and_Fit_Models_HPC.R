@@ -15,7 +15,7 @@ if(TH==1){
 }
 
 ## Load and prepare AS data
-load(file.path(getwd(),"data/allData_AS.R")) ####Needs to be a file named data with the two data files located here
+load("../data/allData_AS.R") ####Needs to be a file named data with the two data files located here
 YData_AS=YData
 XData_AS=XData
 SData_AS=SData
@@ -36,7 +36,7 @@ XData_AS <- XData_AS %>%
 rownames(SData_AS)=rownames(XData_AS)
 
 ## Load and prepare CR data
-load(file.path(getwd(),"data/allData_CR.R")) ####Needs to be a file named data with the two data files located here
+load("../data/allData_CR.R") ####Needs to be a file named data with the two data files located here
 YData_CR=YData
 XData_CR=XData
 SData_CR=SData
@@ -66,19 +66,21 @@ XData_CR <- XData_CR %>%
 XFormula=~Sampling.time
 
 # Tr
-TrFormula=~B03+
-  B04+
-  B01+
-  B05+
-  B02+
-  B06+
-  D03+
-  D01+
-  D04+
-  D02+
+TrFormula=~D09+
   D08+
-  D05
-  
+  D07+
+  D06+
+  D05+
+  D03+
+  D02+
+  D01+
+  B08+
+  B07+
+  B06+
+  B04+
+  B03+
+  B02
+
 # StudyDesign
 rL.Pen_AS = HmscRandomLevel(units = levels(SData_AS[,1]))
 rL.Individual_AS = HmscRandomLevel(units = levels(SData_AS[,2]))
@@ -95,8 +97,8 @@ m_CR = Hmsc(Y=YData_CR,XData = XData_CR, XFormula = XFormula, studyDesign = SDat
             ranLevels = list("cage"=rL.Pen_CR,"individual_id"=rL.Individual_CR),
             TrData = TrData_CR, TrFormula = TrFormula, distr = "normal",YScale = TRUE)
 
-models=list(m_AS,m_CR)
-modelnames=c("AS","CR")
+models=list(m_CR, m_AS)
+modelnames=c("CR", "AS")
 
 ## Fit models
 ## **********
@@ -105,6 +107,7 @@ samples_list = c(10, 250)
 thin_list = c(1, 10)
 nChains = 4
 
+#####Needs to be a folder called 'models' for the models to be saved in this directory
 for(Lst in 1:length(samples_list)){
   thin = thin_list[Lst]
   samples = samples_list[Lst]

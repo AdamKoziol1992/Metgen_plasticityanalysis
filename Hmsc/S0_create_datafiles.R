@@ -3,17 +3,27 @@
 setwd('~/Documents/GitHub/Metgen_plasticityanalysis/Hmsc')
 library(tidyverse)
 library(janitor)
-library(DAMMA)
+library(distillR)
 library(ape)
 library(phytools)
 
-f_table <- pathway_table %>%
-  mutate(Function = str_replace(Function, ' ', '_'))
+f_table <- pathway_db %>%
+  mutate(Function = str_replace_all(Function, ' ', '_')) ##Indolic compounds has been merged with Aromatic_compounds
 
-Functions_to_keep <- c('B03', 'B04', 'B01', 'B05', 'B02', 'B06', 'D03', 'D01', 'D04', 'D02', 'D08', 'D05')
+`%!in%` = Negate(`%in%`)
+
+Functions_to_keep <- f_table %>%
+  select(Function) %>%
+  filter(Function %!in% c('Protein_degradation', 'Antibiotic_biosynthesis', 'Metallophore_biosynthesis', 'Nucleic_acid_biosynthesis')) %>%
+  left_join(f_table[,c('Function', 'Code_function')], by = 'Function') %>% 
+  mutate(Function = str_replace(Function, 'Indolic_compound_biosynthesis', 'Aromatic_compound_biosynthesis'),
+         Code_function = str_replace(Code_function, 'B05', 'B08')) %>% 
+  unique %>% 
+  arrange(desc(Code_function))
+
 
 ### 1.1. Load MAG count data ###
-MAG_counts_AS<-read.csv("../data/AS_TPM.csv",sep = ",", row.names = 1) %>%
+MAG_counts_AS <- read.csv("../data/AS_TPM.csv",sep = ",", row.names = 1) %>%
   select(!contains('FAST')) %>%
   as.data.frame
 
@@ -71,13 +81,13 @@ final_mag_counts_cr <- final_mag_counts_cr %>%
 
 ### 1.3. Load functional annotation table ###
 
-MAG_annot_as=read.csv("../damma/outputsR/distilled_table_functions_AS.csv",sep = ",", row.names = 1) %>% 
+MAG_annot_as=read.csv("../distillR/outputsR/distilled_table_functions_AS.csv",sep = ",", row.names = 1) %>% 
   .[rownames(final_mag_counts_as),] %>%
-  .[,Functions_to_keep] %>% 
+  .[,Functions_to_keep$Code_function] %>% 
   mutate_all(as.numeric)
-MAG_annot_cr=read.csv("../damma/outputsR/distilled_table_functions_CR.csv",sep = ",", row.names = 1) %>% 
+MAG_annot_cr=read.csv("../distillR/outputsR/distilled_table_functions_CR.csv",sep = ",", row.names = 1) %>% 
   .[rownames(final_mag_counts_cr),] %>%
-  .[,Functions_to_keep] %>% 
+  .[,Functions_to_keep$Code_function] %>% 
   mutate_all(as.numeric)
 
 paste("MAGs in MAG_weighted_ca and MAG_annot tables in same order:",
@@ -107,8 +117,10 @@ rownames(TrData)==colnames(YData)
 
 # P matrix
 PData <- p_tree_AS
+
+# Save the datafiles
 save(YData,XData,SData,TrData,PData,
-     file="./data/allData_AS.R")
+     file="../data/allData_AS.R")
 
 ## Save data matrices to be used in the Hmsc modeling
 ## Crocidura russula
@@ -131,6 +143,7 @@ rownames(TrData)==colnames(YData)
 # P matrix
 PData <- p_tree_CR
 
+#Save the data files
 save(YData,XData,SData,TrData,PData,
-     file="./data/allData_CR.R")
+     file="../data/allData_CR.R")
 

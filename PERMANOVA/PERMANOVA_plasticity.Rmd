@@ -142,7 +142,7 @@ table <- table_func(input = CR_perm,
 table
 ```
 
-```{r include=FALSE}
+```{r echo=TRUE}
 AS_met <- AS_met[colnames(AS_counts),]
 
 AS_perm <- adonis2(AS_dissim ~ AS_met$treatment, strata = AS_met$individual_id, permutations = 9999)

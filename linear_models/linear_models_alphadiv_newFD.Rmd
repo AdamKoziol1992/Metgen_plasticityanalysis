@@ -696,7 +696,7 @@ alph_div_pd_combined <- rbind(alph_div_pd_as, alph_div_pd_cr)
 hist(alph_div_pd_combined$diversity)
 boxplot(diversity~treatment*cage,data = alph_div_pd_combined)
 boxplot(log10(diversity)~treatment*cage,data = alph_div_pd_combined)
-model_div_pd_combined.a <- lme(diversity~species,
+model_div_pd_combined.a <- lme(log(diversity)~species,
                   random = ~1|cage/individual_id,
                   correlation = corCAR1(form = ~ as.numeric(days)),
                   data=alph_div_pd_combined)
