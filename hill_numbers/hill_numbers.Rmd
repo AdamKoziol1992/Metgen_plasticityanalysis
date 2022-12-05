@@ -126,14 +126,14 @@ ggsave('./figures/individual_betadiversity_pd.pdf', width = 10, height = 7)
 Overall functional diversity
 ####Functional diversity plots CR
 ```{r include=FALSE}
-Crocidura_products <- read.csv('../damma/outputsR/distilled_table_functions_CR.csv', sep=',', row.names = 1) %>%
+Crocidura_products <- read.csv('../distillR/outputsR/distilled_table_functions_CR.csv', sep=',', row.names = 1) %>%
   .[row.names(crocidura_tpm),]
 ####Check for differences in rows
 setdiff(Crocidura_products$X, row.names(crocidura_tpm))
 
 ####Load the functional traits for Apodemus
 #####Apodemus 
-Apodemus_products <- read.csv('../damma/outputsR/distilled_table_functions_AS.csv', sep=',', row.names = 1) %>%
+Apodemus_products <- read.csv('../distillR/outputsR/distilled_table_functions_AS.csv', sep=',', row.names = 1) %>%
   .[row.names(apodemus_tpm),]
 
 apodemus_products <- Apodemus_products

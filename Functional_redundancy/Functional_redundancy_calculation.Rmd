@@ -31,12 +31,12 @@ AS_counts <- read.csv('../data/AS_TPM.csv', row.names=1, header = T) %>%
 
 metadata <- read.csv('../data/metadata.csv', row.names = 1, header = T)
 
-functions_as <- read.csv('../damma/outputsR/distilled_binary_compounts_bin_AS.csv', sep=',') %>%
+functions_as <- read.csv('../distillR/outputsR/distilled_nonbinary_compounds_AS.csv', sep=',') %>%
   .[.$X %in% rownames(AS_counts),] %>%
   as_data_frame %>% 
   column_to_rownames('X')
 
-functions_cr <- read.csv('../damma/outputsR/distilled_binary_compounts_bin_CR.csv', sep=',') %>%
+functions_cr <- read.csv('../distillR/outputsR/distilled_nonbinary_compounds_CR.csv', sep=',') %>%
   .[.$X %in% rownames(CR_counts),] %>% 
   as_data_frame %>% 
   column_to_rownames('X')

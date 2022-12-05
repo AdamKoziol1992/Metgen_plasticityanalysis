@@ -12,7 +12,7 @@ library(wesanderson)
 ```
 Load the data files in
 ```{r}
-CR <- read.csv('../data/functional_barplot_CR') %>%
+CR <- read.csv('../data/functional_barplot_CR.csv') %>%
   mutate(Disturbance = case_when(xx == 0 ~ 'Day1',
                                  xx == 7 ~ 'Acc',
                                  xx == 19 ~ 'Heat',
@@ -23,7 +23,7 @@ CR <- read.csv('../data/functional_barplot_CR') %>%
          pathway = if_else(str_detect(Function, 'degradation'), 'degradation', 'biosynthesis')) %>% 
   select(-X)
 
-AS <- read.csv('../data/functionalbarplots_AS.csv') %>%
+AS <- read.csv('../data/functional_barplot_AS.csv') %>%
   filter(xx != 52) %>%
   mutate(Disturbance = case_when(xx == 0 ~ 'Day1',
                                  xx == 7 ~ 'Acc',
@@ -51,44 +51,49 @@ Create the plot
 ```{r}
 ggplot(combined, aes(x=me, y=Disturbance, colour = Disturbance)) +
   facet_wrap(.~dist_spec, ncol =2, scale = 'fixed', strip.position = 'left',
-             labeller = as_labeller(c("(Poly)amine_degradation_AS" = '(Poly)amine/ndegradation', #
-                                      "Lipid_degradation_AS"  = 'Lipid/ndegradation', #
-                                      "Nitrogen_compound_degradation_AS" = 'Nitrogen compound/ndegradation', #
-                                      "Polysaccharide_degradation_AS"  = 'Polysaccharide/ndegradation', #
-                                      "Protein_degradation_AS" = 'Protein/ndegradation', #
-                                      "Sugar_degradation_AS" = 'Sugar/ndegradation',#
-                                      "Amino_acid_biosynthesis_AS" = "Amino acid/nbiosynthesis", #
-                                      "Amino_acid_derivative_biosynthesis_AS" = 'Amino acid/nderivative/nbiosynthesis', #
-                                      "Organic_anion_biosynthesis_AS" = 'Organic anion/nbiosynthesis', #
-                                      "SCFA_biosynthesis_AS" = 'SCFA/nbiosynthesis', #
-                                      "Secondary_bile_acid_biosynthesis_AS" = 'Secondary/nbile acid/nbiosynthesis',
-                                      "Vitamin_biosynthesis_AS" = 'Vitamin/nbiosynthesis',
-                                      "(Poly)amine_degradation_CR" = '', #
-                                      "Lipid_degradation_CR"  = '', #
-                                      "Nitrogen_compound_degradation_CR" = '', #
-                                      "Polysaccharide_degradation_CR"  = '', #
-                                      "Protein_degradation_CR" = '', #
-                                      "Sugar_degradation_CR" = '',#
-                                      "Amino_acid_biosynthesis_CR" = "", #
-                                      "Amino_acid_derivative_biosynthesis_CR" = '', #
-                                      "Organic_anion_biosynthesis_CR" = '', #
-                                      "SCFA_biosynthesis_CR" = '', #
-                                      "Secondary_bile_acid_biosynthesis_CR" = '',
-                                      "Vitamin_biosynthesis_CR" = ''))) + #
+             labeller = as_labeller(c("Antibiotic_degradation_AS" = 'Antibiotic\ndegradation', # 1
+                                      "Xenobiotic_degradation_AS"  = 'Xenobiotic\ndegradation', # 2
+                                      "Alcohol_degradation_AS" = 'Alcohol\ndegradation', # 3
+                                      "Nitrogen_compound_degradation_AS"  = 'Nitrogen\ncompound\ndegradation', # 4
+                                      "Amino_acid_degradation_AS" = 'Amino acid\ndegradation', # 5
+                                      "Sugar_degradation_AS" = 'Sugar\ndegradation',# 6
+                                      "Polysaccharide_degradation_AS" = "Polysacchar\n-ide\ndegradation", # 7
+                                      "Lipid_degradation_AS" = 'Lipid\ndegradation', # 8
+                                      "Aromatic_compound_biosynthesis_AS" = 'Aromatic\ncompound\nsynthesis', # 9
+                                      "Vitamin_biosynthesis_AS" = 'Vitamin\nsynthesis', # 10
+                                      "Organic_anion_biosynthesis_AS" = 'Organic\nanion\nsynthesis', # 11
+                                      "SCFA_biosynthesis_AS" = 'SCFA\nsynthesis', # 12
+                                      "Amino_acid_derivative_biosynthesis_AS" = "Amino acid\nderivative\nsynthesis", # 13
+                                      "Amino_acid_biosynthesis_AS" = "Amino acid\nsynthesis", # 14
+                                      "Antibiotic_degradation_CR" = '', 
+                                      "Xenobiotic_degradation_CR"  = '', 
+                                      "Alcohol_degradation_CR" = '', 
+                                      "Nitrogen_compound_degradation_CR"  = '', 
+                                      "Amino_acid_degradation_CR" = '',
+                                      "Sugar_degradation_CR" = '',
+                                      "Polysaccharide_degradation_CR" = "",
+                                      "Lipid_degradation_CR" = '', 
+                                      "Aromatic_compound_biosynthesis_CR" = '', 
+                                      "Vitamin_biosynthesis_CR" = '',
+                                      "Organic_anion_biosynthesis_CR" = '',
+                                      "SCFA_biosynthesis_CR" = '',
+                                      "Amino_acid_derivative_biosynthesis_CR" = "",
+                                      "Amino_acid_biosynthesis_CR" = ""))) +
   geom_point(aes(colour = Disturbance), size = 2) +
   scale_colour_manual(values=c("#9986A5", "#79402E", "#CCBA72", "#0F0D0E", "#a9a9a9"), 
                       breaks=c('Day1', 'Acc', 'Heat', 'Cold', 'Diet')) +
   xlim(0,0.8) +
-  ylab('Functions') +
+  ylab('Microbial-Encoded Functions') +
   xlab('Metabolic Capacity Index (MCI)') +
   geom_errorbar(aes(xmax=hi, xmin=lo),size=0.5) +
-  labs(title = 'A.sylvaticus                                      C.russula') +
+  labs(title = 'A.sylvaticus                                            C.russula') +
   theme(strip.placement = "outside",
         strip.text.x = element_blank(),
-        strip.text.y = element_text(size =8),
+        strip.text.y = element_text(size = 7.5,
+                                    face = 'bold'),
         strip.background = element_blank(),
         panel.background = element_blank(),
-        axis.text.y = element_text(size = 10),
+        axis.text.y = element_text(size = 8),
         panel.grid = element_line(color = "black",
                                   size = 0.05,
                                   linetype = 2),

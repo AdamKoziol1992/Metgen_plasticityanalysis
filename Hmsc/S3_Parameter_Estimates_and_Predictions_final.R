@@ -15,16 +15,17 @@ thin = 10
 samples = 250
 nChains = 4
 
-modelnames=c("CR") #"AS",
+modelnames=c("CR","AS")
 
 ## Phylogenetic and functional structure on microbiome response to time
 ## ***********
 load('./models/model_CR_TH2_thin_10_samples_250_chains_4.Rdata')
 m_CR=m
 
-i=2
 load('./models/model_AS_TH2_thin_10_samples_250_chains_4.Rdata')
 m_AS=m
+
+rm(m)
 
 ## The effect of traits on microbiome response to time
 VP_AS=computeVariancePartitioning(m_AS)
@@ -47,137 +48,145 @@ plotBeta(m_AS,beta_post_AS_beta,plotTree = TRUE,supportLevel = 0.9)
 plotBeta(m_CR,beta_post_CR_beta,plotTree = TRUE,supportLevel = 0.9)
 
 ## Functional dynamics
-
-# AS
+#####Create the gradient and make functional predictions for AS
 Gradient_Time_AS=constructGradient(m_AS,focalVariable = "Sampling.time",non.focalVariables = 1)
 predY_Sampling.time_AS = predict(m_AS, Gradient = Gradient_Time_AS, expected = TRUE)
 
-Polysaccharide.degradation_AS <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                       showData = FALSE,main = "Polysaccharide degradation",index = 2,ylabel = "")
-Sugar.degradation_AS <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                          showData = FALSE,main = "Sugar degradation",index = 3,ylabel = "")
-Lipid.degradation_AS <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                               showData = FALSE,main = "Lipid degradation",index = 4,ylabel = "")
-Protein.degradation_AS <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                           showData = FALSE,main = "Protein degradation",index = 5,ylabel = "")
-Mucin.degradation_AS <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                showData = FALSE,main = "Mucin degradation",index = 6,ylabel = "")
-SCFA.production_AS <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                             showData = FALSE,main = "SCFA production",index = 7,ylabel = "")
-Organic.anion.production_AS <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                   showData = FALSE,main = "Organic anion production",index = 8,ylabel = "")
-Secondary.bile.acid.production_AS<- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                     showData = FALSE,main = "Secondary.bile.acid.production",index = 9,ylabel = "")
-Amino.acid.production_AS<- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                     showData = FALSE,main = "Amino.acid.production",index = 10,ylabel = "")
-Amino.acid.derivative.production_AS<- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                        showData = FALSE,main = "Amino.acid.derivative.production",index = 11,ylabel = "")
-Vitamin.production_AS<- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
-                                        showData = FALSE,main = "Vitamin.production",index = 12,ylabel = "")
+F1 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Antibiotic degradation",index = 2,ylabel = "")
+F2 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Xenobiotic degradation",index = 3,ylabel = "")
+F3 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Alcohol degradation",index = 4,ylabel = "")
+F4 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Nitrogen compound degradation",index = 5,ylabel = "")
+F5 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Amino acid degradation",index = 6,ylabel = "")
+F6 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Sugar degradation",index = 7,ylabel = "")
+F7 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Polysaccharide degradation",index = 8,ylabel = "")
+F8 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                   showData = FALSE,main = "Lipid degradation",index = 9,ylabel = "")
+F9<- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                  showData = FALSE,main = "Aromatic compound biosynthesis",index = 10,ylabel = "")
+F10 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                    showData = FALSE,main = "Vitamin biosynthesis",index = 11,ylabel = "")
+F11 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                    showData = FALSE,main = "Organic anion biosynthesis",index = 12,ylabel = "")
+F12 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                    showData = FALSE,main = "SCFA biosynthesis",index = 13,ylabel = "")
+F13 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                    showData = FALSE,main = "Amino acid derivative biosynthesis",index = 14,ylabel = "")
+F14 <- plotGradient(m_AS, Gradient_Time_AS, pred=predY_Sampling.time_AS, measure="T",q = c(0.05, 0.5, 0.95), 
+                    showData = FALSE,main = "Amino acid biosynthesis",index = 15,ylabel = "")
 
 
-F1 <- as.data.frame(Polysaccharide.degradation_AS[[1]]) %>%
-  mutate(Function = rep('Polysaccharide.degradation_AS'))
-F2 <- as.data.frame(Sugar.degradation_AS[[1]]) %>%
-  mutate(Function = rep('Sugar.degradation_AS'))
-F3 <- as.data.frame(Lipid.degradation_AS[[1]]) %>%
-  mutate(Function = rep('Lipid.degradation_AS'))
-F4 <- as.data.frame(Protein.degradation_AS[[1]]) %>%
-  mutate(Function = rep('Protein.degradation_AS'))
-F5 <- as.data.frame(Mucin.degradation_AS[[1]]) %>%
-  mutate(Function = rep('Mucin.degradation_AS'))
-F6 <- as.data.frame(SCFA.production_AS[[1]]) %>%
-  mutate(Function = rep('SCFA.production_AS'))
-F7 <- as.data.frame(Organic.anion.production_AS[[1]]) %>%
-  mutate(Function = rep('Organic.anion.production_AS'))
-F8 <- as.data.frame(Secondary.bile.acid.production_AS[[1]]) %>%
-  mutate(Function = rep('Secondary.bile.acid.production_AS'))
-F9 <- as.data.frame(Amino.acid.production_AS[[1]]) %>%
-  mutate(Function = rep('Amino.acid.production_AS'))
-F10 <- as.data.frame(Amino.acid.derivative.production_AS[[1]]) %>%
-  mutate(Function = rep('Amino.acid.derivative.production_AS'))
-F11 <- as.data.frame(Vitamin.production_AS[[1]]) %>%
-  mutate(Function = rep('Vitamin.production_AS'))
+F1 <- as.data.frame(F1[[1]]) %>%
+  mutate(Function = rep('Antibiotic degradation'))
+F2 <- as.data.frame(F2[[1]]) %>%
+  mutate(Function = rep('Xenobiotic degradation'))
+F3 <- as.data.frame(F3[[1]]) %>%
+  mutate(Function = rep('Alcohol degradation'))
+F4 <- as.data.frame(F4[[1]]) %>%
+  mutate(Function = rep('Nitrogen compound degradation'))
+F5 <- as.data.frame(F5[[1]]) %>%
+  mutate(Function = rep('Amino acid degradation'))
+F6 <- as.data.frame(F6[[1]]) %>%
+  mutate(Function = rep('Sugar degradation'))
+F7 <- as.data.frame(F7[[1]]) %>%
+  mutate(Function = rep('Polysaccharide degradation'))
+F8 <- as.data.frame(F8[[1]]) %>%
+  mutate(Function = rep('Lipid degradation'))
+F9 <- as.data.frame(F9[[1]]) %>%
+  mutate(Function = rep('Aromatic compound biosynthesis'))
+F10 <- as.data.frame(F10[[1]]) %>%
+  mutate(Function = rep('Vitamin biosynthesis'))
+F11 <- as.data.frame(F11[[1]]) %>%
+  mutate(Function = rep('Organic anion biosynthesis'))
+F12 <- as.data.frame(F12[[1]]) %>%
+  mutate(Function = rep('SCFA biosynthesis'))
+F13 <- as.data.frame(F13[[1]]) %>%
+  mutate(Function = rep('Amino acid derivative biosynthesis'))
+F14 <- as.data.frame(F14[[1]]) %>%
+  mutate(Function = rep('Amino acid biosynthesis'))
 
-combined_functionabarplot_AS <- rbind(F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11) %>%
-  as.data.frame()
-write.csv(combined_functionabarplot_AS, './functionalbarplots_AS.csv')
-write.csv(combined_functionabarplot_AS, '../data/functionalbarplots_AS.csv')
+combined_functionabarplot_AS <- rbind(F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13,F14) %>%
+  as.data.frame() %>% 
+  mutate(Function = str_replace_all(Function, ' ', '_'),
+         Function = str_c(Function, '_AS'))
+write.csv(combined_functionabarplot_AS, '../data/functional_barplot_AS.csv')
 
-windows(10)
-df <- map(reduce(Polysaccharide.degradation_AS[[1]],
-             Sugar.degradation_AS[[1]],
-             Lipid.degradation_AS[[1]],
-             Mucin.degradation_AS[[1]],
-             SCFA.production_AS[[1]],
-             Organic.anion.production_AS[[1]],
-             Amino.acid.production_AS[[1]],
-             Amino.acid.derivative.production_AS[[1]],
-             Vitamin.production_AS[[1]]
-))
 
+#####Create the gradient and make functional predictions for CR
 
 Gradient_Time_CR=constructGradient(m_CR,focalVariable = "Sampling.time")
 predY_Sampling.time_CR = predict(m_CR,Gradient = Gradient_Time_CR, expected = TRUE)
 
-plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-             showData = FALSE)
-
 F1 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                              showData = FALSE,main = "Amino acid biosynthesis",index = 2,ylabel = "")
+                                              showData = FALSE,main = "Antibiotic degradation",index = 2,ylabel = "")
 F2 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                     showData = FALSE,main = "Amino acid derivative biosynthesis",index = 3,ylabel = "")
+                                     showData = FALSE,main = "Xenobiotic degradation",index = 3,ylabel = "")
 F3 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                     showData = FALSE,main = "SCFA biosynthesis",index = 4,ylabel = "")
+                                     showData = FALSE,main = "Alcohol degradation",index = 4,ylabel = "")
 F4 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                       showData = FALSE,main = "Secondary bile acid biosynthesis",index = 5,ylabel = "")
+                                       showData = FALSE,main = "Nitrogen compound degradation",index = 5,ylabel = "")
 F5 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                     showData = FALSE,main = "Organic anion biosynthesis",index = 6,ylabel = "")
+                                     showData = FALSE,main = "Amino acid degradation",index = 6,ylabel = "")
 F6 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                   showData = FALSE,main = "Vitamin biosynthesis",index = 7,ylabel = "")
+                                   showData = FALSE,main = "Sugar degradation",index = 7,ylabel = "")
 F7 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                            showData = FALSE,main = "Lipid degradation",index = 8,ylabel = "")
+                                            showData = FALSE,main = "Polysaccharide degradation",index = 8,ylabel = "")
 F8 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                 showData = FALSE,main = "Polysaccharide degradation",index = 9,ylabel = "")
+                                                 showData = FALSE,main = "Lipid degradation",index = 9,ylabel = "")
 F9<- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                        showData = FALSE,main = "Protein degradation",index = 10,ylabel = "")
+                                        showData = FALSE,main = "Aromatic compound biosynthesis",index = 10,ylabel = "")
 F10 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                                   showData = FALSE,main = "Sugar degradation",index = 11,ylabel = "")
+                                                   showData = FALSE,main = "Vitamin biosynthesis",index = 11,ylabel = "")
 F11 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                                     showData = FALSE,main = "Nitrogen compound degradation",index = 12,ylabel = "")
+                                     showData = FALSE,main = "Organic anion biosynthesis",index = 12,ylabel = "")
 F12 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
-                    showData = FALSE,main = "(Poly)amine degradation",index = 13,ylabel = "")
+                    showData = FALSE,main = "SCFA biosynthesis",index = 13,ylabel = "")
+F13 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
+                    showData = FALSE,main = "Amino acid derivative biosynthesis",index = 14,ylabel = "")
+F14 <- plotGradient(m_CR, Gradient_Time_CR, pred=predY_Sampling.time_CR, measure="T",q = c(0.05, 0.5, 0.95), 
+                    showData = FALSE,main = "Amino acid biosynthesis",index = 15,ylabel = "")
+
 
 F1 <- as.data.frame(F1[[1]]) %>%
-  mutate(Function = rep('Amino acid biosynthesis'))
+  mutate(Function = rep('Antibiotic degradation'))
 F2 <- as.data.frame(F2[[1]]) %>%
-  mutate(Function = rep('Amino acid derivative biosynthesis'))
+  mutate(Function = rep('Xenobiotic degradation'))
 F3 <- as.data.frame(F3[[1]]) %>%
-  mutate(Function = rep('SCFA biosynthesis'))
+  mutate(Function = rep('Alcohol degradation'))
 F4 <- as.data.frame(F4[[1]]) %>%
-  mutate(Function = rep('Secondary bile acid biosynthesis'))
-F5 <- as.data.frame(F5[[1]]) %>%
-  mutate(Function = rep('Organic anion biosynthesis'))
-F6 <- as.data.frame(F6[[1]]) %>%
-  mutate(Function = rep('Vitamin biosynthesis'))
-F7 <- as.data.frame(F7[[1]]) %>%
-  mutate(Function = rep('Lipid degradation'))
-F8 <- as.data.frame(F8[[1]]) %>%
-  mutate(Function = rep('Polysaccharide degradation'))
-F9 <- as.data.frame(F9[[1]]) %>%
-  mutate(Function = rep('Protein degradation'))
-F10 <- as.data.frame(F10[[1]]) %>%
-  mutate(Function = rep('Sugar degradation'))
-F11 <- as.data.frame(F11[[1]]) %>%
   mutate(Function = rep('Nitrogen compound degradation'))
+F5 <- as.data.frame(F5[[1]]) %>%
+  mutate(Function = rep('Amino acid degradation'))
+F6 <- as.data.frame(F6[[1]]) %>%
+  mutate(Function = rep('Sugar degradation'))
+F7 <- as.data.frame(F7[[1]]) %>%
+  mutate(Function = rep('Polysaccharide degradation'))
+F8 <- as.data.frame(F8[[1]]) %>%
+  mutate(Function = rep('Lipid degradation'))
+F9 <- as.data.frame(F9[[1]]) %>%
+  mutate(Function = rep('Aromatic compound biosynthesis'))
+F10 <- as.data.frame(F10[[1]]) %>%
+  mutate(Function = rep('Vitamin biosynthesis'))
+F11 <- as.data.frame(F11[[1]]) %>%
+  mutate(Function = rep('Organic anion biosynthesis'))
 F12 <- as.data.frame(F12[[1]]) %>%
-  mutate(Function = rep('(Poly)amine degradation'))
+  mutate(Function = rep('SCFA biosynthesis'))
+F13 <- as.data.frame(F13[[1]]) %>%
+  mutate(Function = rep('Amino acid derivative biosynthesis'))
+F14 <- as.data.frame(F14[[1]]) %>%
+  mutate(Function = rep('Amino acid biosynthesis'))
 
-combined_functionabarplot_CR <- rbind(F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12) %>%
+combined_functionabarplot_CR <- rbind(F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13,F14) %>%
   as.data.frame() %>% 
   mutate(Function = str_replace_all(Function, ' ', '_'),
          Function = str_c(Function, '_CR'))
-write.csv(combined_functionabarplot_CR, '../data/functional_barplot_CR')
+write.csv(combined_functionabarplot_CR, '../data/functional_barplot_CR.csv')
 
 
 ## MAG-level responses

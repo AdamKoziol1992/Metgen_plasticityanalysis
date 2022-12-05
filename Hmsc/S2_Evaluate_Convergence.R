@@ -7,13 +7,13 @@ ModelDir = file.path(localDir, "models")
 PanelDir = file.path(localDir, "panels")
 
 TH=2
-samples_list = c(250,250)
+samples_list = c(10,250)
 thin_list = c(1,10)
 nst = length(thin_list)
 nChains = 4
 modelnames=c("CR", "AS")
 
-for(i in 1){
+for(i in 1:length(modelnames)){
   ma = NULL
   na = NULL
   ma_gamma = NULL
@@ -23,11 +23,9 @@ for(i in 1){
   for (Lst in 1:nst) {
     thin = thin_list[Lst]
     samples = samples_list[Lst]
-    
-    
     filename = paste("model_",modelnames[i],"_TH",as.character(TH),"_thin_", as.character(thin),
                      "_samples_", as.character(samples),
-                     "_chains_",as.character(nChains),"_lognormal.Rdata",sep = "")
+                     "_chains_",as.character(nChains),'.Rdata',sep = "")
     load(file=file.path(ModelDir,filename))
     mpost = convertToCodaObject(m, spNamesNumbers = c(T,F), covNamesNumbers = c(T,F))
     psrf.beta = gelman.diag(mpost$Beta,multivariate=FALSE)$psrf

@@ -3,8 +3,8 @@ title: "linear_models on alpha hill numbers"
 author: "Adam_Koziol"
 date: "4/21/2022"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 setting up the environment    
 

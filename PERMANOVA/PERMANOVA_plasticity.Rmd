@@ -65,10 +65,10 @@ AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>%
   keep.tip(row.names(AS_counts)) %>%
   force.ultrametric(AS_tree,method="extend")
 
-AS_products <- read.csv('../damma/outputsR/distilled_table_functions_AS.csv', row.names = 1, header = T) %>%
+AS_products <- read.csv('../distillR/outputsR/distilled_nonbinary_compounds_AS.csv', row.names = 1, header = T) %>%
   .[rownames(AS_counts),]
 
-CR_products <- read.csv('../damma/outputsR/distilled_nonbinary_compounds_CR.csv', row.names = 1, header = T) %>%
+CR_products <- read.csv('../distillR/outputsR/distilled_nonbinary_compounds_CR.csv', row.names = 1, header = T) %>%
   .[rownames(CR_counts),]
 ```
 
@@ -387,6 +387,8 @@ my_combined_CAP
 
 ggsave('./figures/CAP_full.png', my_combined_CAP, width = 10, height = 7)
 ggsave('./figures/CAP_full.pdf', my_combined_CAP, width = 10, height = 7)
+ggsave('./figures/CAP_full.tiff', compression = 'lzw', my_combined_CAP, width = 10, height = 7)
+
 ```
 
 
