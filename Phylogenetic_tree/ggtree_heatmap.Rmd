@@ -18,6 +18,11 @@ library(phytools)
 library(distillR)
 ```
 
+```{r}
+#which functions 2 keep based on Hmsc functions
+functions2keep <- c('D09','D08','D07','D06','D05','D03', 'D02','D01', 'B08','B07','B06','B04','B03','B02')
+```
+
 Load data files
 ```{r include=FALSE}
 metadata <- read.csv('../data/metadata.csv', header = T, row.names = 1)
@@ -44,7 +49,10 @@ AS_taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) %>%
   .[AS_TPM$X,] %>% 
   rownames_to_column('label') #necessary for the future joining
 
-F_table <- pathway_db
+F_table <- pathway_db %>% 
+  .[.$Code_function %in% functions2keep,]
+
+
 ```
 
 Create base layer circular tree for CR
@@ -65,17 +73,22 @@ CR <- rotate_tree(CR, 290)
 CR
 #######Combining heatmaps require the rownames of the heatmap to match the tipnames of the tree
 CR_heatmap <- read.csv('../distillR/outputsR/distilled_table_functions_CR.csv', row.names = 1) %>% 
-  .[CR_tree$tip.label,]
+  .[CR_tree$tip.label,] %>% 
+  .[,functions2keep]
 
 column_info <- F_table %>%
- filter(Code_function %in% colnames(CR_heatmap)) %>% 
-  select(Function) %>% 
-  unique %>% 
+  filter(Code_function %in% colnames(CR_heatmap)) %>% 
+  select(Function, Code_function) %>% 
+  unique %>%
+  .[match(.$Code_function, colnames(CR_heatmap)),] %>% 
   mutate(abbrevs = str_to_title(Function),
          synth_deg = word(Function, sep = '_', start = -1),
-         function_label = rep(1:18),
+         function_label = rep(1:14),
          combined = str_c(function_label, abbrevs, sep = ':'))
   
+  
+write.csv(column_info, './column_info.csv')
+
 column_labels <- column_info %>% 
   select(function_label) %>%
   as.vector(.) %>% 
@@ -84,16 +97,15 @@ column_labels <- column_info %>%
 
 CR_plot <- gheatmap(CR, 
                     CR_heatmap,
-                    low = 'white',
-                    high = 'red',
-                    font.size = 2.5,
+                    low = '#ffd89b',
+                    high = '#19547b',
+                    font.size = 2,
                     width = 1,
                     colnames = T,
                     custom_column_labels = column_labels,
                     legend_title = 'Functional_completeness') +
   theme(legend.position = 'bottom',
-        plot.margin = margin(0, 0, 0, 0)) +
-  annotate('label')
+        plot.margin = margin(0, 0, 0, 0))
 
 CR_plot
 ```
@@ -128,16 +140,15 @@ AS_heatmap <- read.csv('../distillR/outputsR/distilled_table_functions_AS.csv', 
 
 AS_plot <- gheatmap(AS, 
                     AS_heatmap,
-                    low = 'white',
-                    high = 'red',
-                    font.size = 2.5,
+                    low = '#ffd89b',
+                    high = '#19547b',
+                    font.size = 2,
                     width = 0.75,
                     colnames = T,
                     custom_column_labels = column_labels,
                     legend_title = 'Functional_completeness') +
   theme(legend.position = 'bottom',
-        plot.margin = margin(0, 0, 0, 0)) +
-  labs()
+        plot.margin = margin(0, 0, 0, 0))
 
 AS_plot
 ```
@@ -151,5 +162,8 @@ ggpubr::ggarrange(AS_plot,
 ggsave('./figures/MAG_comparison.png')
 ggsave('./figures/MAG_comparison.pdf')
 ggsave('./figures/MAG_comparison.tiff', compression = 'lzw')
+```
+```{r}
+sessionInfo()
 ```
 
