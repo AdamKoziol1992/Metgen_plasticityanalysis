@@ -5,7 +5,7 @@ date: "2022-12-02"
 output: html_document
 ---
 Load libraries and set directory
-```{r}
+```{r include=FALSE}
 setwd('~/Documents/GitHub/Metgen_plasticityanalysis/Phylogenetic_tree/')
 library(tidyverse)
 library(ggtree)
@@ -14,10 +14,12 @@ library(ape)
 library(phytools)
 library(ggtreeExtra)
 library(viridis) #delete once found a better colour palette
+library(phytools)
+library(distillR)
 ```
 
 Load data files
-```{r}
+```{r include=FALSE}
 metadata <- read.csv('../data/metadata.csv', header = T, row.names = 1)
 
 CR_TPM <- read.csv('../data/TPM_CR.csv')
@@ -27,7 +29,8 @@ CR_tree <- read.tree(file='../data/gtdbtk.bac120.classify_CR.tree') %>%
 CR_taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) %>% 
   filter(str_detect(user_genome, '^bin_s')) %>% 
   column_to_rownames('user_genome') %>% 
-  .[CR_TPM$X,]
+  .[CR_TPM$X,] %>% 
+  rownames_to_column('label') #necessary for the future joining
 
 
 AS_TPM <- read.csv('../data/AS_TPM.csv') %>%
@@ -38,19 +41,115 @@ AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>%
 AS_taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) %>% 
   filter(str_detect(user_genome, '^bin_m')) %>% 
   column_to_rownames('user_genome') %>% 
-  .[AS_TPM$X,]
+  .[AS_TPM$X,] %>% 
+  rownames_to_column('label') #necessary for the future joining
+
+F_table <- pathway_db
 ```
 
 Create base layer circular tree for CR
 ```{r}
-p <- ggtree(CR_tree, layout = 'circular')
-p <- p %>% 
-  inner_join(CR_taxa, )
+CR <- ggtree(CR_tree, layout = 'fan', open.angle = 45) %<+%
+  CR_taxa +
+  geom_highlight(node = 61, fill = "#00ABA9", type = 'rect', to.bottom = T) + #Proteo
+  geom_highlight(fill = '#825A2C', node = 60, to.bottom = T) + #Desulfo
+  geom_highlight(fill = '#F0A30A', node = 75, to.bottom = T) + #Campyllobacter
+  geom_highlight(fill = '#0050EF', node = 77, to.bottom = T) + #Bacteroidota
+  geom_highlight(fill = '#D80073', node = 76, to.bottom = T) + #Chlamydiota
+  geom_highlight(fill = '#E51400', node = 78, to.bottom = T) + #Spirochaetota
+  geom_highlight(fill = '#AA00FF', node = 80, to.bottom = T) + #Firmicutes
+  geom_highlight(fill = '#60A917', node = 103, to.bottom = T) #Actinobacter 
 
-p <- p %<+%
-  CR_taxa
-p
+CR <- rotate_tree(CR, 290)
+
+CR
+#######Combining heatmaps require the rownames of the heatmap to match the tipnames of the tree
+CR_heatmap <- read.csv('../distillR/outputsR/distilled_table_functions_CR.csv', row.names = 1) %>% 
+  .[CR_tree$tip.label,]
+
+column_info <- F_table %>%
+ filter(Code_function %in% colnames(CR_heatmap)) %>% 
+  select(Function) %>% 
+  unique %>% 
+  mutate(abbrevs = str_to_title(Function),
+         synth_deg = word(Function, sep = '_', start = -1),
+         function_label = rep(1:18),
+         combined = str_c(function_label, abbrevs, sep = ':'))
+  
+column_labels <- column_info %>% 
+  select(function_label) %>%
+  as.vector(.) %>% 
+  .[[1]]
+
+
+CR_plot <- gheatmap(CR, 
+                    CR_heatmap,
+                    low = 'white',
+                    high = 'red',
+                    font.size = 2.5,
+                    width = 1,
+                    colnames = T,
+                    custom_column_labels = column_labels,
+                    legend_title = 'Functional_completeness') +
+  theme(legend.position = 'bottom',
+        plot.margin = margin(0, 0, 0, 0)) +
+  annotate('label')
+
+CR_plot
 ```
 
+```{r}
+###Same plot for Apodemus
+AS <- ggtree(AS_tree, layout = 'fan', open.angle = 45) %<+%
+  AS_taxa +
+  geom_highlight(node = 421, fill = "#00ABA9", to.bottom = T) + #Proteo
+  geom_highlight(fill = '#825A2C', node = 446, to.bottom = T) + #Desulfo
+  geom_highlight(fill = '#F0A30A', node = 453, to.bottom = T) + #Campyllobacter
+  geom_highlight(fill = '#76608A', node = 452, to.bottom = T) + #Deferribacterota
+  geom_highlight(fill = '#0050EF', node = 457, to.bottom = T) + #Bacteroidota
+  geom_highlight(fill = '#6A00FF', node = 563, to.bottom = T) + #Verruco
+  geom_highlight(fill = '#87794E', node = 562, to.bottom = T) + #Elusmo
+  geom_highlight(fill = '#E3C800', node = 148, to.bottom = T) + #Fuso
+  geom_highlight(fill = '#A20025', node = 149, to.bottom = T) + #Patescibacteria
+  geom_highlight(fill = '#008A00', node = 564, to.bottom = T) + #Cyanobact
+  geom_highlight(fill = '#AA00FF', node = 569, to.bottom = T) + #Firmicutes
+  geom_highlight(fill = '#60A917', node = 823, to.bottom = T)
+  
+AS
 
+AS <- rotate_tree(AS, 290)
+  
+AS  
+#######Combining heatmaps require the rownames of the heatmap to match the tipnames of the tree
+AS_heatmap <- read.csv('../distillR/outputsR/distilled_table_functions_AS.csv', row.names = 1) %>% 
+  .[AS_tree$tip.label,]
+
+
+
+AS_plot <- gheatmap(AS, 
+                    AS_heatmap,
+                    low = 'white',
+                    high = 'red',
+                    font.size = 2.5,
+                    width = 0.75,
+                    colnames = T,
+                    custom_column_labels = column_labels,
+                    legend_title = 'Functional_completeness') +
+  theme(legend.position = 'bottom',
+        plot.margin = margin(0, 0, 0, 0)) +
+  labs()
+
+AS_plot
+```
+Combine both plots
+```{r}
+ggpubr::ggarrange(AS_plot,
+                  CR_plot,
+                  common.legend = T,
+                  legend = 'bottom')
+
+ggsave('./figures/MAG_comparison.png')
+ggsave('./figures/MAG_comparison.pdf')
+ggsave('./figures/MAG_comparison.tiff', compression = 'lzw')
+```
 
