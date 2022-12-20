@@ -12,6 +12,7 @@ library(wesanderson)
 ```
 Load the data files in
 ```{r}
+#CS data file consisting of each prediction
 CR <- read.csv('../data/functional_barplot_CR.csv') %>%
   mutate(Disturbance = case_when(xx == 0 ~ 'Day1',
                                  xx == 7 ~ 'Acc',
@@ -22,7 +23,7 @@ CR <- read.csv('../data/functional_barplot_CR.csv') %>%
          Species = rep('CR'),
          pathway = if_else(str_detect(Function, 'degradation'), 'degradation', 'biosynthesis')) %>% 
   select(-X)
-
+#AS data file consisting of each prediction
 AS <- read.csv('../data/functional_barplot_AS.csv') %>%
   filter(xx != 52) %>%
   mutate(Disturbance = case_when(xx == 0 ~ 'Day1',
@@ -38,6 +39,7 @@ AS <- read.csv('../data/functional_barplot_AS.csv') %>%
 
 Combined data for both species and re-order based on degradation and biosynthesis pathways
 ```{r}
+#Combine AS and CR files
 combined <- rbind(AS, CR) %>%
   mutate(hi = as.numeric(round(hi, digits = 2)),
          lo = as.numeric(round(lo, digits = 2)),
@@ -49,6 +51,7 @@ combined <- rbind(AS, CR) %>%
 
 Create the plot
 ```{r}
+#Create functional prediction plot using the linear model estimates
 ggplot(combined, aes(x=me, y=Disturbance, colour = Disturbance)) +
   facet_wrap(.~dist_spec, ncol =2, scale = 'fixed', strip.position = 'left',
              labeller = as_labeller(c("Antibiotic_degradation_AS" = 'Antibiotic\ndegradation', # 1

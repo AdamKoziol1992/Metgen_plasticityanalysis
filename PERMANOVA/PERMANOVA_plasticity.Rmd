@@ -23,6 +23,7 @@ library(phytools)
 ```
 Kable execution of PERMANOVA tables
 ```{r}
+###Function to create HTML tables from PERMANOVA outputs
 table_func <- function(input, str_removal, table_title){
 maineffects <- input[c(1,2,3),]
 interaction <- input[c(4,5),]
@@ -41,6 +42,7 @@ return(maineffects_table)
 
 Loading in the data files
 ```{r include=FALSE}
+#Load metadata
 metadata <- read.csv('../data/metadata.csv', row.names = 1, header = T)
 
 CR_met <- metadata %>%
@@ -53,27 +55,30 @@ AS_met <- metadata %>%
   column_to_rownames('sample_id') %>%
   mutate(sample_id = rownames(.))
 
+#Count data for CR
 CR_counts <- read.csv('../data/TPM_CR.csv', row.names = 1, header = T)
+#Count data for AS
 AS_counts <- read.csv('../data/AS_TPM.csv', row.names = 1, header = T) %>%
   .[,rownames(AS_met)]
-
+#Phylogenetic tree for CR
 CR_tree <- read.tree(file='../data/gtdbtk.bac120.classify_CR.tree') %>%
   keep.tip(row.names(CR_counts)) %>%
   force.ultrametric(CR_tree,method="extend")
-
+#Phylogenetic tree for AS
 AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>%
   keep.tip(row.names(AS_counts)) %>%
   force.ultrametric(AS_tree,method="extend")
-
+#Functional data for AS
 AS_products <- read.csv('../distillR/outputsR/distilled_nonbinary_compounds_AS.csv', row.names = 1, header = T) %>%
   .[rownames(AS_counts),]
-
+#Functional data for CR
 CR_products <- read.csv('../distillR/outputsR/distilled_nonbinary_compounds_CR.csv', row.names = 1, header = T) %>%
   .[rownames(CR_counts),]
 ```
 
 Taxonomic dissimilarity matrix
 ```{r include=FALSE}
+#Pairwise neutral beta diversity matrix
 CR_dissim <- hill_taxa_parti_pairwise(t(CR_counts), q = 1, output = 'matrix') %>% 
   .[[5]] %>%
   as.data.frame %>% 
@@ -91,6 +96,7 @@ AS_dissim <- hill_taxa_parti_pairwise(t(AS_counts), q = 1, output = 'matrix') %>
 
 Phylogenetic dissimilarity matrix
 ```{r include=FALSE}
+#Pairwise phylogenetic beta diversity matrix
 CR_dissim_pd <- hill_phylo_parti_pairwise(t(CR_counts), tree = CR_tree, q = 1, output = 'matrix') %>% 
   .[[5]] %>%
   as.data.frame %>% 
@@ -110,6 +116,7 @@ Functional dissimilarity matrix
 ```{r include=FALSE}
 CR_products <- CR_products[rownames(CR_counts),]
 
+#Pairwise functional beta diversity matrix
 CR_dissim_fd <- hill_func_parti_pairwise(comm = t(CR_counts),
                                          traits = CR_products,
                                          output = 'matrix',
@@ -132,7 +139,7 @@ Perform the PERMANOVA
 ```{r echo=TRUE}
 ###Re-order the metdata
 CR_met <- CR_met[colnames(CR_counts),]
-
+##PERMANOVA for neutral diversities CR
 CR_perm <- adonis2(CR_dissim ~ CR_met$treatment, strata = CR_met$individual_id, permutations = 9999)
 
 table <- table_func(input = CR_perm,
@@ -145,6 +152,7 @@ table
 ```{r echo=TRUE}
 AS_met <- AS_met[colnames(AS_counts),]
 
+##PERMANOVA for neutral diversities AS
 AS_perm <- adonis2(AS_dissim ~ AS_met$treatment, strata = AS_met$individual_id, permutations = 9999)
 
 table <- table_func(input = AS_perm,
@@ -155,6 +163,7 @@ table
 ```
 Perform the phylogenetic PERMANOVA 
 ```{r echo=TRUE}
+##PERMANOVA for phylogenetic diversities CR
 CR_perm_phy <- adonis2(CR_dissim_pd ~ CR_met$treatment, strata = CR_met$individual_id, permutations = 9999)
 
 table <- table_func(input = CR_perm_phy,
@@ -165,6 +174,7 @@ table
 ```
 
 ```{r echo=TRUE}
+###PERMANOVA for Phylogenetic diversities AS
 AS_perm_phy <- adonis2(AS_dissim_pd ~ AS_met$treatment, strata = AS_met$individual_id, permutations = 9999)
 
 table <- table_func(input = AS_perm_phy,
@@ -176,6 +186,7 @@ table
 
 Perform the functional PERMANOVA 
 ```{r echo=TRUE}
+##PERMANOVA for functional diversities CR
 CR_perm_fd <- adonis2(CR_dissim_fd ~ CR_met$treatment, strata = CR_met$individual_id, permutations = 9999)
 
 table <- table_func(input = CR_perm_fd,
@@ -186,6 +197,7 @@ table
 ```
 
 ```{r echo=TRUE}
+##PERMANOVA for Functional diversities AS
 AS_perm_fd <- adonis2(AS_dissim_fd ~ AS_met$treatment, strata = AS_met$individual_id, permutations = 9999)
 
 table <- table_func(input = AS_perm_fd,
@@ -380,11 +392,18 @@ CR_plot_fd
 
 Combine all CAP plots 
 ```{r eval=FALSE, include=FALSE}
-my_combined_CAP <- ggarrange(AS_plot, CR_plot, AS_plot_pd, CR_plot_pd, AS_plot_fd, CR_plot_fd, labels = c('A', 'B', 'C', 'D', 'E', 'F'),
-                             ncol=2, nrow = 3, common.legend = T, legend = 'bottom', label.x = -0.018) + bgcolor("White") + border(color = "White", size = 0.8, linetype = NULL)
+#Combine the CAP plots for AS and CR for each diversity metric
+my_combined_CAP <- ggarrange(AS_plot, CR_plot, AS_plot_pd, CR_plot_pd, AS_plot_fd, CR_plot_fd,
+                             labels = c('A', 'B', 'C', 'D', 'E', 'F'),
+                             ncol=2, nrow = 3,
+                             common.legend = T,
+                             legend = 'bottom',
+                             label.x = -0.018) +
+  bgcolor("White") + border(color = "White", size = 0.8, linetype = NULL)
 
 my_combined_CAP
 
+#Save the combined plot in each format based on need
 ggsave('./figures/CAP_full.png', my_combined_CAP, width = 10, height = 7)
 ggsave('./figures/CAP_full.pdf', my_combined_CAP, width = 10, height = 7)
 ggsave('./figures/CAP_full.tiff', compression = 'lzw', my_combined_CAP, width = 10, height = 7)

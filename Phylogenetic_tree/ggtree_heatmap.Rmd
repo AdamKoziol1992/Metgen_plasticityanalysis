@@ -25,24 +25,29 @@ functions2keep <- c('D09','D08','D07','D06','D05','D03', 'D02','D01', 'B08','B07
 
 Load data files
 ```{r include=FALSE}
+#Load metadata
 metadata <- read.csv('../data/metadata.csv', header = T, row.names = 1)
-
+#Load CR counts
 CR_TPM <- read.csv('../data/TPM_CR.csv')
+#Load CR phylogenetic tree
 CR_tree <- read.tree(file='../data/gtdbtk.bac120.classify_CR.tree') %>%
   keep.tip(CR_TPM$X) %>%
   force.ultrametric(CR_tree,method="extend")
+#Load CR taxonomic information for each MAG
 CR_taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) %>% 
   filter(str_detect(user_genome, '^bin_s')) %>% 
   column_to_rownames('user_genome') %>% 
   .[CR_TPM$X,] %>% 
   rownames_to_column('label') #necessary for the future joining
 
-
+#Load AS counts
 AS_TPM <- read.csv('../data/AS_TPM.csv') %>%
   dplyr::select(!ends_with('FAST'))
+#Load AS phylogenetic tree
 AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>%
   keep.tip(AS_TPM$X) %>%
   force.ultrametric(AS_tree,method="extend")
+#Load AS taxonomic information for each MAG
 AS_taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) %>% 
   filter(str_detect(user_genome, '^bin_m')) %>% 
   column_to_rownames('user_genome') %>% 
@@ -57,6 +62,7 @@ F_table <- pathway_db %>%
 
 Create base layer circular tree for CR
 ```{r}
+##Create phylogenetic tree for CR and colour the fan based on the phylogenetic information
 CR <- ggtree(CR_tree, layout = 'fan', open.angle = 45) %<+%
   CR_taxa +
   geom_highlight(node = 61, fill = "#00ABA9", type = 'rect', to.bottom = T) + #Proteo
@@ -68,10 +74,12 @@ CR <- ggtree(CR_tree, layout = 'fan', open.angle = 45) %<+%
   geom_highlight(fill = '#AA00FF', node = 80, to.bottom = T) + #Firmicutes
   geom_highlight(fill = '#60A917', node = 103, to.bottom = T) #Actinobacter 
 
+#Rotate the three and leave a gap for text information
 CR <- rotate_tree(CR, 290)
 
 CR
 #######Combining heatmaps require the rownames of the heatmap to match the tipnames of the tree
+##Load the CR functional information
 CR_heatmap <- read.csv('../distillR/outputsR/distilled_table_functions_CR.csv', row.names = 1) %>% 
   .[CR_tree$tip.label,] %>% 
   .[,functions2keep]
@@ -94,7 +102,7 @@ column_labels <- column_info %>%
   as.vector(.) %>% 
   .[[1]]
 
-
+#Create the CR phylogenetic/functional MAG information
 CR_plot <- gheatmap(CR, 
                     CR_heatmap,
                     low = '#ffd89b',
@@ -133,11 +141,11 @@ AS <- rotate_tree(AS, 290)
   
 AS  
 #######Combining heatmaps require the rownames of the heatmap to match the tipnames of the tree
+#Load the AS functional information
 AS_heatmap <- read.csv('../distillR/outputsR/distilled_table_functions_AS.csv', row.names = 1) %>% 
   .[AS_tree$tip.label,]
 
-
-
+#Create the AS phylogenetic/functional MAG information plot
 AS_plot <- gheatmap(AS, 
                     AS_heatmap,
                     low = '#ffd89b',
@@ -154,11 +162,12 @@ AS_plot
 ```
 Combine both plots
 ```{r}
+#Combine both plots
 ggpubr::ggarrange(AS_plot,
                   CR_plot,
                   common.legend = T,
                   legend = 'bottom')
-
+#Save in three formats based on need
 ggsave('./figures/MAG_comparison.png')
 ggsave('./figures/MAG_comparison.pdf')
 ggsave('./figures/MAG_comparison.tiff', compression = 'lzw')

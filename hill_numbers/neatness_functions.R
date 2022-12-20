@@ -4,19 +4,28 @@
 #############Takes the dataframe and joins the metadata to create a useful csv from it
 make_overall_csv <- function(first_df){
   first_df %>%
+    #Make sure individual ID is character
     mutate(individual_id = as.character(individual_id)) %>%
+    #Combine the metadata
     left_join(metadata, by = c('individual_id')) %>%
+    #Only take unique occurences
     unique %>%
+    #Transform the matrix to dissimilarity
     mutate(beta = 1 - as.numeric(beta.dissimilarity)) %>%
+    #Restructure the data inputs
     mutate(across(c(individual_id, species, cage), as.character),
            across(c(beta, beta.dissimilarity), as.numeric))}
 
 ############Filters individuals that do not have all data points
 which_ind_2keep <- function(metadata, species){metadata %>%
+    #Group by Individual
     group_by(individual_id) %>%
+    #Count the number of samples by individual
     tally %>%
+    #Filter only those who had 100% of samples working
     filter(n == 5) %>%
     filter(str_detect(individual_id, species)) %>%
+    #Join the metadata
     left_join(metadata, by = 'individual_id')}
 
 ############Plotting function to visualise the overall dissimilarities
@@ -42,13 +51,17 @@ Create_dissims <- function(input_df, input_metadata, input_list, stored_data, hi
   stored_data <- data.frame()
   if(extra_input == TRUE){
     for (m in input_list){
+      #Print the individual ID
       print(m)
+      #Create individual disturbance matrices
       PRE <- as.character(input_metadata[input_metadata$individual_id == m & input_metadata$treatment == 'Day1', 'sample_id'])
       POST <- as.character(input_metadata[input_metadata$individual_id == m & input_metadata$treatment == 'Acc', 'sample_id'])
       HEAT <- as.character(input_metadata[input_metadata$individual_id == m & input_metadata$treatment == 'Heat', 'sample_id'])
       COLD <- as.character(input_metadata[input_metadata$individual_id == m & input_metadata$treatment == 'Cold', 'sample_id'])
       DIET <- as.character(input_metadata[input_metadata$individual_id == m & input_metadata$treatment == 'Diet', 'sample_id'])
+      #Combine individual matrixes by individual
       my_matrix <- input_df[,c(PRE,POST,HEAT,COLD,DIET)]
+      #Beta diversity function is inputted
       my_beta <- hillR_func(t(my_matrix), extra_file, q = 1) %>%
         mutate(dissimilarity = 1-local_similarity) %>%
         select(dissimilarity)
@@ -57,6 +70,7 @@ Create_dissims <- function(input_df, input_metadata, input_list, stored_data, hi
     }
     return(stored_data)
   }
+  #Used When using neutral metrics
   else{
     for (m in input_list){
       print(m)

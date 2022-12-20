@@ -27,29 +27,29 @@ library(phytools)
 Loading metadata and GTDB taxonomy files
 ```{r}
 source('./neatness_functions.R') ###Load in auxillary functions for this data analysis
-metadata <- read.csv('../data/metadata.csv', header = T, row.names = 1)
-taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) 
+metadata <- read.csv('../data/metadata.csv', header = T, row.names = 1) #Metadata file
+taxa <- read.csv('../data/taxa.csv', sep=',', header=T, row.names=1) #Taxonomic information of each MAG
 ```
 
 Load Apodemus and Crocidura normalised counts and taxonomic data
 ```{r}
-CR_TPM <- read.csv('../data/TPM_CR.csv')
+CR_TPM <- read.csv('../data/TPM_CR.csv') #Load count data
 
-CR_tree <- read.tree(file='../data/gtdbtk.bac120.classify_CR.tree') %>%
+CR_tree <- read.tree(file='../data/gtdbtk.bac120.classify_CR.tree') %>% #Load CR tree file
   keep.tip(CR_TPM$X) %>%
   force.ultrametric(CR_tree,method="extend")
 
-AS_TPM <- read.csv('../data/AS_TPM.csv') %>%
+AS_TPM <- read.csv('../data/AS_TPM.csv') %>% #Load count data AS
   dplyr::select(!ends_with('FAST'))
 
-AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>%
+AS_tree <- read.tree(file='../data/gtdbtk.bac120.classify_AS.tree') %>% #Load AS tree file
   keep.tip(AS_TPM$X) %>%
   force.ultrametric(AS_tree,method="extend")
 ```
 
 Create the partitions for overall diversity analyses
 ```{r}
-#####################Apodemus sylvaticus
+##Separate each metadata into AS or CR
 metadata_ord_AS <- which_ind_2keep(metadata, '^M')
 metadata_ord_CR <- which_ind_2keep(metadata, '^S')
 
@@ -67,6 +67,7 @@ shrew_list <- as.character(unique(metadata_ord_CR$individual_id))
 
 Overall taxonomic diversity
 ```{r}
+###Overall taxonomic diversity across all disturbances - See neatness_functions for functionality of the code
 Total_beta_AS_td <- Create_dissims(input_df = TPM_match_AS,
                                    input_metadata = metadata_ord_AS,
                                    input_list = mouse_list,
@@ -95,6 +96,7 @@ ggsave('./figures/individual_betadiversity_td.pdf', width = 10, height = 7)
 
 Overall_phylogenetic diversity
 ```{r}
+##Overall phylogenetic diversities across all disturbances - See neatness_functions for functionality of the code
 Total_beta_AS_pd <- Create_dissims(input_df = TPM_match_AS,
                                    input_metadata = metadata_ord_AS,
                                    input_list = mouse_list,
@@ -144,6 +146,7 @@ setdiff(row.names(apodemus_products), row.names(apodemus_tpm))
 
 Overall functional diversity plots
 ```{r}
+#Overall functional diversities across all disturbances - See neatness_functions for functionality of the code
 Total_beta_AS_fd <- Create_dissims(input_df = TPM_match_AS,
                                    input_metadata = metadata_ord_AS,
                                    input_list = mouse_list,
@@ -175,6 +178,7 @@ ggsave('./figures/individual_betadiversity_fd.pdf', width = 10, height = 7)
 
 Check Alpha diversity indices across different treatments and plot the diversity metrics
 ```{r}
+#Neutral alpha diversities for AS and CR
 Alpha_div_td_AS <- hill_taxa(t(apodemus_tpm), q=1) %>%
   as.data.frame() %>%
   rename('diversity' = '.') %>%
@@ -193,6 +197,7 @@ Alpha_combined <- rbind(Alpha_div_td_AS, Alpha_div_td_CR)
 
 write.csv(Alpha_combined, './outputsR/diversity_table.csv')
 
+##Plot overall alpha diversities
 alpha <- ggplot(unique(Alpha_combined), aes(x=species, y=diversity, fill=species)) +
   facet_wrap(~treatment, nrow = 1) +
   geom_boxplot(width=0.5, aes(fill=species),size=0.25) +
@@ -219,6 +224,7 @@ alpha
 
 Alpha diversities for phylogenetic metrics
 ```{r}
+##Phylogenetic alpha diversities for AS and CR
 Alpha_div_pd_AS <- hill_phylo(t(apodemus_tpm), tree = AS_tree, q=1) %>%
   as.data.frame() %>%
   rename('diversity' = '.') %>%
@@ -237,6 +243,7 @@ Alpha_combined_pd <- rbind(Alpha_div_pd_AS, Alpha_div_pd_CR)
 
 write.csv(Alpha_combined_pd, './outputsR/diversity_table_pd.csv')
 
+#Plot phylogenetic alpha diversities
 alpha_pd <- ggplot(unique(Alpha_combined_pd), aes(x=species, y=diversity, fill=species)) +
   facet_wrap(~treatment, nrow = 1) +
   geom_boxplot(width=0.5, aes(fill=species), size=0.5, alpha = 0.85) +
@@ -257,6 +264,7 @@ alpha_pd
 
 Alpha diversities for functional metrics
 ```{r}
+#Functional alpha diversities for AS and CR
 Alpha_div_fd_AS <- hill_func(t(apodemus_tpm), apodemus_products, q=1) %>%
   t() %>%
   as.data.frame() %>%
@@ -274,7 +282,7 @@ Alpha_div_fd_CR <- hill_func(t(crocidura_tpm), Crocidura_products, q=1) %>%
 Alpha_combined_fd <- rbind(Alpha_div_fd_AS, Alpha_div_fd_CR)
 
 write.csv(Alpha_combined_fd, './outputsR/diversity_table_fd.csv')
-
+#Plot functional alpha diversities
 alpha_fd <- ggplot(Alpha_combined_fd, aes(x=species, y=Q, fill=species)) +
   facet_grid(~treatment, scales = 'free') +
   geom_boxplot(width=0.5, aes(fill=species), size=0.5, alpha = 0.7) +
@@ -294,8 +302,11 @@ alpha_fd
 
 Taxonomic beta diversities
 ```{r}
+##Neutral beta diversities
+#Sequential order of disturbances
 correct_order <- c("Day_Acc_AS", "Day_Acc_CR", "Acc_Heat_AS", "Acc_Heat_CR","Heat_Cold_AS","Heat_Cold_CR","Cold_Diet_AS", "Cold_Diet_CR")
 
+#Create the beta diversity matrix for each individual - See neatness_functions for functionality of the code
 dissim_table_AS <- beta_div_func(input_df = TPM_match_AS,
                                  input_metadata = metadata_ord_AS,
                                  input_list = mouse_list,
@@ -326,6 +337,7 @@ Beta_combined_td <- rbind(dissim_table_AS, dissim_table_CR) %>%
 
 write.csv(Beta_combined_td, './outputsR/dissimilarity_combined_td.csv')
 
+#Overall neutral beta diversity plot
 tax_beta <- ggplot(Beta_combined_td, aes(x=treatmentWspecies, y=beta, fill=Species)) +
   geom_boxplot(width=0.5) +
   geom_jitter(alpha=0.2, position = position_jitter(0.2), size=0.5) +
@@ -356,6 +368,7 @@ tax_beta
 
 Phylogenetic beta diversities
 ```{r}
+#Create the phylogenetic beta diversity matrix for each individual - See neatness_functions for functionality of the code
 dissim_table_AS_pd <- beta_div_func(input_df = TPM_match_AS,
                                  input_metadata = metadata_ord_AS,
                                  input_list = mouse_list,
@@ -389,6 +402,7 @@ Beta_combined_pd <- rbind(dissim_table_AS_pd, dissim_table_CR_pd) %>%
 
 write.csv(Beta_combined_pd, './outputsR/Beta_combined_pd.csv')
 
+#Phylogenetic beta diversity plot
 pd_beta <- ggplot(Beta_combined_pd, aes(x=treatmentWspecies, y=beta, fill=Species)) +
   geom_boxplot(width=0.5, alpha = 0.85) +
   geom_jitter(alpha=0.2, position=position_jitter(0.2), size=0.5) +
@@ -411,6 +425,7 @@ pd_beta
 ```
 Functional beta diversities
 ```{r}
+#Create the Functional beta diversity matrix for each individual - See neatness_functions for functionality of the code
 dissim_table_AS_fd <- beta_div_func(input_df = TPM_match_AS,
                                  input_metadata = metadata_ord_AS,
                                  input_list = mouse_list,
@@ -442,6 +457,7 @@ Beta_combined_fd <- rbind(dissim_table_AS_fd, dissim_table_CR_fd) %>%
 
 write.csv(Beta_combined_fd, './outputsR/dissimilarity_combined_fd.csv')
 
+#Functional beta diversity plot
 fd_beta <- ggplot(Beta_combined_fd, aes(x=treatmentWspecies, y=beta, fill=Species)) +
   geom_boxplot(width=0.5, alpha =0.7) +
   geom_jitter(alpha=0.2, position=position_jitter(0.2), size=0.5) +
@@ -467,8 +483,9 @@ fd_beta
 ```
 
 ```{r}
+##Create function to remove legends 
 rm_legend <- function(p){p + theme(legend.position = "none")}
-
+##Combine all six plots into one and unify with a common legend
 alpha_beta_plots <- ggarrange(rm_legend(alpha), rm_legend(alpha_pd), rm_legend(alpha_fd), tax_beta, rm_legend(pd_beta),  rm_legend(fd_beta), 
           labels=c('A', 'B', 'C', 'D', 'E', 'F'),
           ncol=3, nrow=2,
@@ -476,6 +493,7 @@ alpha_beta_plots <- ggarrange(rm_legend(alpha), rm_legend(alpha_pd), rm_legend(a
           legend = 'bottom')
 alpha_beta_plots
 
+#Save in three formats based on needs
 ggsave('./figures/alpha_beta_plots.pdf', alpha_beta_plots, height = 7, width = 10, dpi = 1000)
 ggsave('./figures/alpha_beta_plots.png', alpha_beta_plots, height = 7, width = 10, dpi = 1000)
 ggsave('./figures/alpha_beta_plots.tiff', compression = 'lzw')
