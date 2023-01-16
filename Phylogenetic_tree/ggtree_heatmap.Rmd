@@ -63,7 +63,7 @@ F_table <- pathway_db %>%
 Create base layer circular tree for CR
 ```{r}
 ##Create phylogenetic tree for CR and colour the fan based on the phylogenetic information
-CR <- ggtree(CR_tree, layout = 'fan', open.angle = 45) %<+%
+CR <- ggtree(CR_tree, layout = 'fan', open.angle = 45, size = 0.1) %<+%
   CR_taxa +
   geom_highlight(node = 61, fill = "#00ABA9", type = 'rect', to.bottom = T) + #Proteo
   geom_highlight(fill = '#825A2C', node = 60, to.bottom = T) + #Desulfo
@@ -120,7 +120,7 @@ CR_plot
 
 ```{r}
 ###Same plot for Apodemus
-AS <- ggtree(AS_tree, layout = 'fan', open.angle = 45) %<+%
+AS <- ggtree(AS_tree, layout = 'fan', open.angle = 45, size = 0.1) %<+%
   AS_taxa +
   geom_highlight(node = 421, fill = "#00ABA9", to.bottom = T) + #Proteo
   geom_highlight(fill = '#825A2C', node = 446, to.bottom = T) + #Desulfo
@@ -143,7 +143,8 @@ AS
 #######Combining heatmaps require the rownames of the heatmap to match the tipnames of the tree
 #Load the AS functional information
 AS_heatmap <- read.csv('../distillR/outputsR/distilled_table_functions_AS.csv', row.names = 1) %>% 
-  .[AS_tree$tip.label,]
+  .[AS_tree$tip.label,] %>% 
+  .[,functions2keep]
 
 #Create the AS phylogenetic/functional MAG information plot
 AS_plot <- gheatmap(AS, 
