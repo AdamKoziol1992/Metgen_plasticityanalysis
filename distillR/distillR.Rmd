@@ -11,6 +11,7 @@ library(distillR)
 library(tidyverse)
 library(data.table)
 library(RColorBrewer)
+library(pheatmap)
 ```
 
 Load data
@@ -148,5 +149,105 @@ ggplot(compounds_table_df2, aes(x=MAGs, y=Code_compound, fill=Fullness, group=Fu
   theme(strip.text.y = element_text(angle = 0),axis.text.x=element_blank())
 ggsave('./figure/Apodemus_magbyfuctions.png', height = 15, width = 10)
 ```
+Increaser vs decreaser heatmaps
+```{r eval=FALSE, include=FALSE}
+increasers <- c("bin_s6.mtb27",
+                "bin_s36.vmb0",
+                "bin_s21.mxb8",
+                "bin_s14.cct6",
+                "bin_s13.vmb19",
+                "bin_s36.mxb13",
+                "bin_s34.cct50",
+                "bin_s13.cct72",
+                "bin_s6.vmb19",
+                "bin_s27.mtb32",
+                "bin_s13.vmb53",
+                "bin_s14.cct55_sub",
+                "bin_s27.vmb32")
 
+decreasers <- c("bin_s28.mxb31",
+                "bin_s19.cct18_sub",
+                "bin_s14.mtb52",
+                "bin_s19.vmb3",
+                "bin_s28.mtb8",
+                "bin_s23.cct42",
+                "bin_s36.mtb18",
+                "bin_s34.mtb22_sub",
+                "bin_s14.mtb51",
+                "bin_s14.vmb0",
+                "bin_s4.vmb27",
+                "bin_s34.cct27",
+                "bin_s21.mxb1",
+                "bin_s2.mxb1",
+                "bin_s35.cct57_sub",
+                "bin_s27.mtb39")
+
+bidirection <- c("bin_s6.mtb27",
+                "bin_s36.vmb0",
+                "bin_s21.mxb8",
+                "bin_s14.cct6",
+                "bin_s13.vmb19",
+                "bin_s36.mxb13",
+                "bin_s34.cct50",
+                "bin_s13.cct72",
+                "bin_s6.vmb19",
+                "bin_s27.mtb32",
+                "bin_s13.vmb53",
+                "bin_s14.cct55_sub",
+                "bin_s27.vmb32",
+                "bin_s28.mxb31",
+                "bin_s19.cct18_sub",
+                "bin_s14.mtb52",
+                "bin_s19.vmb3",
+                "bin_s28.mtb8",
+                "bin_s23.cct42",
+                "bin_s36.mtb18",
+                "bin_s34.mtb22_sub",
+                "bin_s14.mtb51",
+                "bin_s14.vmb0",
+                "bin_s4.vmb27",
+                "bin_s34.cct27",
+                "bin_s21.mxb1",
+                "bin_s2.mxb1",
+                "bin_s35.cct57_sub",
+                "bin_s27.mtb39")
+
+crzscore <- MCI_functions %>% 
+  scale()
+
+
+annotation_row <- bidirection %>%
+  as.data.frame %>%
+  rename('MAG' = '.') %>%
+  mutate(Direction = ifelse(MAG %in% increasers, 'Increasers', 'Decreasers')) %>%
+  left_join(taxa[,c(1,3)], by = c('MAG'='user_genome')) %>%
+  mutate(Phylum = str_remove_all(Phylum, '_A$'))
+
+MCI_functions <- as.data.frame(MCI_functions) %>% 
+  rownames_to_column('MAG')
+
+distilled_increasers <- crzscore %>%
+  .[bidirection,]
+
+annotation_row <- annotation_row %>% 
+  column_to_rownames('MAG')
+
+heatmap <- pheatmap(distilled_increasers,
+           fontsize_row = 12,
+           cluster_cols = F,
+           annotation_row = annotation_row,
+           fontsize_col = 12,
+           angle_col = 45,
+           cluster_rows = F,
+           cutree_rows = 2,
+           gaps_row = 13)
+ggsave('./figure/direction_heatmap.png', heatmap, width = 10, height = 7)
+ggsave('./figure/direction_heatmap.pdf', heatmap, width = 10, height = 7)
+
+```
+
+
+```{r}
+sessionInfo()
+```
 
