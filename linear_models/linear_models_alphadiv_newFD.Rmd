@@ -235,9 +235,9 @@ The lowest AIC is the gls without random effects - however i consider the random
 included
 ```{r}
 #model_cr.a <- lme(diversity~treatment,
-                  #random = ~1|cage/individual_id,
-                  #correlation = corCAR1(form = ~ as.numeric(days)),
-                  #data=alph_div_tax_cr)
+ #                 random = ~1|cage/individual_id,
+  #                correlation = corCAR1(form = ~ as.numeric(days)),
+   #               data=alph_div_tax_cr)
 model_cr.b <- lme(diversity~treatment,
                   random = ~1|cage,
                   data=alph_div_tax_cr)
@@ -314,11 +314,11 @@ model_as.d_fd <- lme(Q~treatment,
                   data=alph_div_fd_as)
 model_as.e_fd <- lm(Q~treatment,
                   data=alph_div_fd_as)
-AIC(model_as.a_fd) #292.0188
-AIC(model_as.b_fd) #290.6965
-AIC(model_as.c_fd) #292.2867
-AIC(model_as.d_fd) #292.3475
-AIC(model_as.e_fd) #286.632
+AIC(model_as.a_fd)
+AIC(model_as.b_fd)
+AIC(model_as.c_fd) 
+AIC(model_as.d_fd) 
+AIC(model_as.e_fd) 
 ```
 
 
@@ -376,11 +376,11 @@ model_cr.e_fd <- lm(Q~treatment,
                   data=alph_div_fd_cr)
 
 
-AIC(model_cr.a_fd) #377.5765
-AIC(model_cr.b_fd) #376.0824
-AIC(model_cr.c_fd) #379.5765
-AIC(model_cr.d_fd) #374.0913
-AIC(model_cr.e_fd) #370.5743
+AIC(model_cr.a_fd) 
+AIC(model_cr.b_fd)
+AIC(model_cr.c_fd)
+AIC(model_cr.d_fd)
+AIC(model_cr.e_fd)
 ```
 
 ```{r}
@@ -444,11 +444,11 @@ model_as.e.pd  <- lm(diversity~treatment,
                   data=alph_div_pd_as)
 
 anova(model_as.a.pd,model_as.b.pd,model_as.c.pd,model_as.e.pd)
-AIC(model_as.a.pd ) #525.004
-AIC(model_as.b.pd ) #529.4421
-AIC(model_as.c.pd ) #529.9477
-AIC(model_as.d.pd ) #523.7998
-AIC(model_as.e.pd ) #546.8065
+AIC(model_as.a.pd ) 
+AIC(model_as.b.pd ) 
+AIC(model_as.c.pd ) 
+AIC(model_as.d.pd ) 
+AIC(model_as.e.pd )
 ```
 Residuals looks like they are randomly distributed around 0
 ```{r}
@@ -476,10 +476,6 @@ summary(model_as1_pd)
 We have a slightly significant treatment effect
 ```{r}
 anova(model_as1_pd)
-
-#There is a significant treatment and sex effect 
-#Treatment = 0.0374
-#Sex = 0.0105
 ```
 
 ```{r}
@@ -523,11 +519,11 @@ model_cr.e.pd <-  lm(diversity~treatment,
 
 
 anova(model_cr.a.pd,model_cr.b.pd,model_cr.c.pd,model_cr.e.pd)
-AIC(model_cr.a.pd ) #383.197
-AIC(model_cr.b.pd ) #381.197
-AIC(model_cr.c.pd ) #379.439
-AIC(model_cr.d.pd ) #379.439
-AIC(model_cr.e.pd ) #377.9547
+AIC(model_cr.a.pd )
+AIC(model_cr.b.pd )
+AIC(model_cr.c.pd ) 
+AIC(model_cr.d.pd ) 
+AIC(model_cr.e.pd )
 ```
 Residuals looks like they are randomly distributed around 0
 ```{r}

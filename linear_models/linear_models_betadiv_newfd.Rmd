@@ -164,7 +164,7 @@ AIC(model_as.f_fd)
 
 
 ```{r}
-model_as1=model_as.b_fd
+model_as1=model_as.a_fd
 E <- resid(model_as1, type = "normalized")
 Fit <- fitted(model_as1)
 op <- par(mfrow = c(1, 2))
@@ -302,7 +302,7 @@ AIC(model_as.e) #-72.88434
 AIC(model_as.f) #-75.6534
 ```
 ```{r}
-model_as1=model_as.b
+model_as1=model_as.a
 E <- resid(model_as1, type = "normalized")
 Fit <- fitted(model_as1)
 op <- par(mfrow = c(1, 2))
@@ -428,7 +428,7 @@ AIC(model_as.pd.f)
 ```
 
 ```{r}
-model_as1=model_as.pd.b
+model_as1=model_as.pd.a
 E <- resid(model_as1, type = "normalized")
 Fit <- fitted(model_as1)
 op <- par(mfrow = c(1, 2))
