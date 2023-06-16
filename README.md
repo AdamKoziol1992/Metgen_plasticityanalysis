@@ -2,7 +2,7 @@
 Analysis of shotgun metagenomic plasticity - data availability open to public after publication
 
 ############This repository describes the work used to explore gut microbiome dynamics in two species denoted as AS and CR
-
+Bioinformatic code used for this project can be found in the holoflow directory.
 
 ############Analyses we have done include
 
