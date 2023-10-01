@@ -115,7 +115,7 @@ combined_functionabarplot_AS <- rbind(F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13
   as.data.frame() %>% 
   mutate(Function = str_replace_all(Function, ' ', '_'),
          Function = str_c(Function, '_AS'))
-write.csv(combined_functionabarplot_AS, '../data/functional_barplot_AS.csv')
+write.csv(combined_functionabarplot_AS, '../data/functional_estimates_AS.csv')
 
 
 #####Create the gradient and make functional predictions for CR
@@ -186,7 +186,7 @@ combined_functionabarplot_CR <- rbind(F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,F11,F12,F13
   as.data.frame() %>% 
   mutate(Function = str_replace_all(Function, ' ', '_'),
          Function = str_c(Function, '_CR'))
-write.csv(combined_functionabarplot_CR, '../data/functional_barplot_CR.csv')
+write.csv(combined_functionabarplot_CR, '../data/functional_estimates_CR.csv')
 
 
 ## MAG-level responses

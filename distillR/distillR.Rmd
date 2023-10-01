@@ -221,16 +221,19 @@ annotation_row <- bidirection %>%
   rename('MAG' = '.') %>%
   mutate(Direction = ifelse(MAG %in% increasers, 'Increasers', 'Decreasers')) %>%
   left_join(taxa[,c(1,3)], by = c('MAG'='user_genome')) %>%
-  mutate(Phylum = str_remove_all(Phylum, '_A$'))
+  mutate(Phylum = str_remove_all(Phylum, '_A$')) %>% 
+  column_to_rownames('MAG')
 
-MCI_functions <- as.data.frame(MCI_functions) %>% 
-  rownames_to_column('MAG')
+MCI_functions <- as.data.frame(MCI_functions)
+
+###Keep only the functions used within HMSC
+functions2Keep <- c('D09','D08','D07','D06','D05','D03','D02','D01','B08','B07','B06','B04','B03','B02')
 
 distilled_increasers <- crzscore %>%
   .[bidirection,]
+distilled_increasers <- distilled_increasers %>% 
+  .[,functions2Keep]
 
-annotation_row <- annotation_row %>% 
-  column_to_rownames('MAG')
 
 heatmap <- pheatmap(distilled_increasers,
            fontsize_row = 12,
@@ -243,6 +246,7 @@ heatmap <- pheatmap(distilled_increasers,
            gaps_row = 13)
 ggsave('./figure/direction_heatmap.png', heatmap, width = 10, height = 7)
 ggsave('./figure/direction_heatmap.pdf', heatmap, width = 10, height = 7)
+ggsave('./figure/direction_heatmap.tiff', heatmap, width = 10, height = 7, compression='lzw')
 
 ```
 
