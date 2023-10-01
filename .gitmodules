@@ -1,0 +1,3 @@
+[submodule "holoflow"]
+	path = holoflow
+	url = https://github.com/AdamKoziol1992/holoflow.git
